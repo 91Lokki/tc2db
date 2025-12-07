@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <title>The Crew 2 玩家系統 - 登入</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="api.js"></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <div class="header-logo"> TC2 DB</div>
+                <nav class="header-nav">
+                    <a href="home.html" class="nav-link nav-link-active">首頁</a>
+                    <a href="leaderboard.html" class="nav-link">排行榜</a>
+                    <a href="trade.html" class="nav-link">交易中心</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+    <div class="app">
+        <h1>The Crew 2 玩家系統</h1>
+
+        <h2>登入</h2>
+        <label>
+            帳號：<br>
+            <input type="text" id="login-username">
+        </label><br>
+        <label>
+            密碼：<br>
+            <input type="password" id="login-password">
+        </label><br>
+        <button id="login-btn">登入</button>
+        <p id="login-msg"></p>
+
+        <hr>
+
+        <p>
+            還沒有帳號？
+            <button id="go-register">Create new account</button>
+        </p>
+    </div>
+
+    <script>
+        const loginBtn = document.getElementById("login-btn");
+        const goRegBtn = document.getElementById("go-register");
+
+        loginBtn.addEventListener("click", () => {
+            const u = document.getElementById("login-username").value;
+            const p = document.getElementById("login-password").value;
+
+            apiLogin(u, p).then(user => {
+                if (user) {
+                    // ★ 修正：這裡改成讀取 player_id (對應新的 api.js)
+                    localStorage.setItem("playerId", user.player_id);
+                    localStorage.setItem("username", user.username);
+                    window.location.href = "home.html";
+                } else {
+                    document.getElementById("login-msg").innerText = "帳號或密碼錯誤，或尚未註冊";
+                }
+            });
+        });
+
+        goRegBtn.addEventListener("click", () => {
+            window.location.href = "register.html";
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <title>首頁 - The Crew 2 系統</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="api.js"></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <!-- 左邊：logo + 導覽連結，全靠左 -->
+            <div class="header-left">
+                <div class="header-logo"> TC2 DB</div>
+                <nav class="header-nav">
+                    <a href="home.html" class="nav-link nav-link-active">首頁</a>
+                    <a href="leaderboard.html" class="nav-link">排行榜</a>
+                    <a href="trade.html" class="nav-link">交易中心</a>
+                </nav>
+            </div>
+
+            <!-- 右邊：profile icon（只剩這一顆） -->
+            <div class="header-right">
+                <div class="profile-icon" id="nav-profile-icon"></div>
+            </div>
+        </div>
+    </header>
+    <div class="app">
+        <h1>功能選單</h1>
+        <div class="card-container">
+            <div class="card" id="card-leaderboard">
+                <img src="images/leaderboard.png" alt="排行榜" class="card-image">
+                <h2>排行榜</h2>
+                <p>查看積分與賽道紀錄。</p>
+            </div>
+
+            <div class="card" id="card-trade">
+                <img src="images/trade.png" alt="交易中心" class="card-image">
+                <h2>交易中心</h2>
+                <p>購買新車或玩家二手車。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const playerId = localStorage.getItem("playerId");
+        if (!playerId) {
+            window.location.href = "index.html";
+        }
+
+        const navIcon = document.getElementById("nav-profile-icon");
+        if (navIcon) {
+            const username = localStorage.getItem("username") || "你";
+            navIcon.textContent = username.charAt(0).toUpperCase();
+            navIcon.addEventListener("click", () => {
+                window.location.href = "profile.html";
+            });
+        }
+
+        document.getElementById("card-leaderboard").addEventListener("click", () => {
+            window.location.href = "leaderboard.html";
+        });
+
+        document.getElementById("card-trade").addEventListener("click", () => {
+            window.location.href = "trade.html";
+        });
+    </script>
+</body>
+
+</html>

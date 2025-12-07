@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <title>個人資料</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="api.js"></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <div class="header-logo"> TC2 DB</div>
+                <nav class="header-nav">
+                    <a href="home.html" class="nav-link">首頁</a>
+                    <a href="leaderboard.html" class="nav-link">排行榜</a>
+                    <a href="trade.html" class="nav-link">交易中心</a>
+                </nav>
+            </div>
+
+            <div class="header-right">
+                <div class="profile-icon" id="nav-profile-icon"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="app">
+        <h1>玩家個人資料</h1>
+
+        <div id="profile-basic" style="margin-top:10px;">
+            </div>
+
+        <div id="edit-section" style="display:none; margin-top:15px;">
+            <h2>Edit Profile</h2>
+            <label>
+                新密碼（留白則不更改）：<br>
+                <input type="password" id="edit-password">
+            </label><br>
+            <button id="save-profile">Save</button>
+            <button id="cancel-edit">Cancel</button>
+            <button id="delete-account" style="margin-left:12px;background:#ff3b30;color:#fff;border-color:#ff3b30;">
+                刪除帳號
+            </button>
+            <p id="edit-msg"></p>
+        </div>
+
+        <h2 style="margin-top:25px;">擁有的車子</h2>
+        <table id="car-table">
+            <thead>
+                <tr>
+                    <th>品牌</th>
+                    <th>車款</th>
+                    <th>狀態</th>
+                    <th>價格</th>
+                    <th>管理</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h2 style="margin-top:25px;">交易歷史紀錄</h2>
+        <table id="tx-table">
+            <thead>
+                <tr>
+                    <th>時間</th>
+                    <th>類型</th>
+                    <th>對象</th>
+                    <th>車款</th>
+                    <th>金額</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const playerId = localStorage.getItem("playerId");
+        if (!playerId) {
+            window.location.href = "index.html";
+        }
+
+        let currentUser = null;
+
+        // 右上角圓形：顯示 username 第一個字
+        const navIcon = document.getElementById("nav-profile-icon");
+        if (navIcon) {
+            const username = localStorage.getItem("username") || "你";
+            navIcon.textContent = username.charAt(0).toUpperCase();
+            navIcon.addEventListener("click", () => {
+                window.location.href = "profile.html";
+            });
+        }
+
+        const profileBasic = document.getElementById("profile-basic");
+        const editSection = document.getElementById("edit-section");
+        const editPasswordInput = document.getElementById("edit-password");
+        const editMsg = document.getElementById("edit-msg");
+        const txBody = document.querySelector("#tx-table tbody");
+
+        // 渲染交易紀錄
+        function renderTransactions(transactions) {
+            if (!txBody) return;
+
+            txBody.innerHTML = "";
+            const list = Array.isArray(transactions) ? [...transactions] : [];
+
+            if (list.length === 0) {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td colspan="5">目前尚無交易紀錄</td>`;
+                txBody.appendChild(tr);
+                return;
+            }
+
+            list.forEach(t => {
+                const timeText = t.time ? new Date(t.time).toLocaleString() : "-";
+                let typeText = "-";
+                switch (t.type) {
+                    case "BUY_DEALER":
+                        typeText = "品牌車購入";
+                        break;
+                    case "BUY_USED":
+                        typeText = "二手車購入";
+                        break;
+                    case "SELL_USED":
+                        typeText = "二手車售出";
+                        break;
+                    default:
+                        typeText = t.type || "-";
+                }
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                  <td>${timeText}</td>
+                  <td>${typeText}</td>
+                  <td>${t.counterparty || "-"}</td>
+                  <td>${t.desc || "-"}</td>
+                  <td>${t.amount != null ? t.amount : "-"}</td>
+                `;
+                txBody.appendChild(tr);
+            });
+        }
+
+        // 渲染基本資訊 + 生涯數據 + 車子列表
+        function renderProfile(user) {
+            currentUser = user;
+            if (!user) return;
+
+            let careerScore = user.totalScore || 0;
+            const totalRaces = user.raceCount || 0;
+            const winCount = user.winCount || 0;   
+            const silverCups = user.secCount || 0;
+            const bronzeCups = user.trdCount || 0;
+            const goldCups = winCount;
+            const podiumCount = goldCups + silverCups + bronzeCups;
+
+            let createdAtText = "-";
+            if (user.reg_date) {
+                createdAtText = new Date(user.reg_date).toLocaleDateString("zh-TW");
+            }
+
+            // ★ 修改 1：移除了 <p>目前年度總積分：...</p>
+            profileBasic.innerHTML = `
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;">
+                <div>
+                  <p>帳號 (ID)：${user.username}</p>
+                  <p>金幣：${user.money}</p>
+                </div>
+                <div style="text-align:right;">
+                  <button id="edit-profile">Edit</button>
+                  <button id="logout-btn" style="margin-left:8px;">登出</button>
+                </div>
+              </div>
+
+              <div style="margin-top:20px;padding:16px 18px;border-radius:18px;background:#ffffff;
+                          box-shadow:0 10px 24px rgba(0,0,0,0.06);border:1px solid rgba(0,0,0,0.04);">
+                <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;justify-content:space-between;">
+                  <div style="min-width:220px;">
+                    <div style="font-size:13px;color:#6e6e73;margin-bottom:4px;">目前年度積分排名</div>
+                    <div id="stat-rank" style="font-size:28px;font-weight:700;color:#111111;letter-spacing:0.03em;">--</div>
+                    <div id="stat-rank-year" style="font-size:12px;color:#8e8e93;margin-top:2px;"></div>
+                  </div>
+                  <div style="flex:1;min-width:260px;">
+                    <div style="font-size:13px;color:#6e6e73;margin-bottom:4px;">金 / 銀 / 銅盃 次數</div>
+                    <div style="font-size:24px;font-weight:700;display:flex;gap:18px;flex-wrap:wrap;">
+                      <span>🥇 <span id="stat-gold">${goldCups}</span></span>
+                      <span>🥈 <span id="stat-silver">${silverCups}</span></span>
+                      <span>🥉 <span id="stat-bronze">${bronzeCups}</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:18px;">
+                  <div style="min-width:140px;">
+                    <div style="font-size:12px;color:#6e6e73;">生涯總積分</div>
+                    <div id="stat-career-score" style="font-size:18px;font-weight:600;">${careerScore}</div>
+                  </div>
+                  <div style="min-width:140px;">
+                    <div style="font-size:12px;color:#6e6e73;">總參賽次數</div>
+                    <div id="stat-total-races" style="font-size:18px;font-weight:600;">${totalRaces}</div>
+                  </div>
+                  <div style="min-width:140px;">
+                    <div style="font-size:12px;color:#6e6e73;">分站冠軍次數</div>
+                    <div id="stat-wins" style="font-size:18px;font-weight:600;">${winCount}</div>
+                  </div>
+                  <div style="min-width:140px;">
+                    <div style="font-size:12px;color:#6e6e73;">上獎台次數</div>
+                    <div id="stat-podiums" style="font-size:18px;font-weight:600;">${podiumCount}</div>
+                  </div>
+                  <div style="min-width:160px;">
+                    <div style="font-size:12px;color:#6e6e73;">註冊日期</div>
+                    <div id="stat-created" style="font-size:16px;font-weight:500;">${createdAtText}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+
+            // Edit 按鈕事件
+            document.getElementById("edit-profile").addEventListener("click", () => {
+                editSection.style.display = "block";
+            });
+
+            // 登出
+            document.getElementById("logout-btn").addEventListener("click", () => {
+                localStorage.removeItem("playerId");
+                localStorage.removeItem("username");
+                window.location.href = "index.html";
+            });
+
+            // 更新排名
+            apiGetYears().then(years => {
+                if (!years || years.length === 0) return;
+                const latestYear = years[years.length - 1];
+                const yearLabel = document.getElementById("stat-rank-year");
+                if (yearLabel) yearLabel.textContent = `${latestYear} 年度`;
+                
+                apiGetPlayerRankByYear(latestYear, user.username).then(info => {
+                    const rankEl = document.getElementById("stat-rank");
+                    if (!rankEl) return;
+                    // ★ 修改 2：如果名次是 0 或不存在，顯示 "--"，否則顯示 "第 X 名"
+                    if (info && info.rank > 0) {
+                        rankEl.textContent = `第 ${info.rank} 名`;
+                    } else {
+                        rankEl.textContent = "--";
+                    }
+                });
+            });
+
+            // 車子列表
+            const carBody = document.querySelector("#car-table tbody");
+            carBody.innerHTML = "";
+            (user.cars || []).forEach(c => {
+                const onSale = c.on_sale;
+                const carId = c.car_id;
+                
+                const statusText = onSale ? "已上架到二手市場" : "持有中";
+                const btnText = onSale ? "取消上架" : "上架到二手市場";
+                const priceDisplay = onSale ? c.sale_price : "-";
+
+                carBody.innerHTML += `
+                  <tr>
+                    <td>${c.brand_name || "未知品牌"}</td>
+                    <td>${c.model_name || "未知車款"}</td>
+                    <td>${statusText}</td>
+                    <td>${priceDisplay}</td>
+                    <td>
+                      <button class="sell-btn"
+                              data-id="${carId}"
+                              data-onsale="${onSale}">
+                        ${btnText}
+                      </button>
+                    </td>
+                  </tr>
+                `;
+            });
+
+            // 綁定按鈕
+            carBody.querySelectorAll(".sell-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const carId = btn.getAttribute("data-id");
+                    const onSale = btn.getAttribute("data-onsale") === "true";
+
+                    if (!onSale) {
+                        const priceInput = prompt("請輸入上架價格：", "100000");
+                        if (priceInput === null) return;
+
+                        const price = Number(priceInput);
+                        if (!Number.isFinite(price) || price <= 0) {
+                            alert("金額不合法");
+                            return;
+                        }
+
+                        apiSetCarOnSale(playerId, carId, true, price).then(res => {
+                            if (res && res.success) {
+                                loadProfile();
+                            } else {
+                                alert(res && res.message ? res.message : "上架失敗");
+                            }
+                        });
+                    } else {
+                        apiSetCarOnSale(playerId, carId, false, 0).then(res => {
+                            if (res && res.success) {
+                                loadProfile();
+                            } else {
+                                alert(res && res.message ? res.message : "取消上架失敗");
+                            }
+                        });
+                    }
+                });
+            });
+
+            // 交易紀錄
+            apiGetTransactions(playerId).then(txs => {
+                renderTransactions(txs);
+            });
+        }
+
+        // 讀取個人資料
+        function loadProfile() {
+            apiGetProfile(playerId).then(user => {
+                renderProfile(user);
+            });
+        }
+
+        // 儲存編輯
+        document.getElementById("save-profile").addEventListener("click", () => {
+            const newPassword = editPasswordInput.value;
+            editMsg.innerText = "";
+            const updateData = {};
+            if (newPassword) updateData.password = newPassword;
+
+            if (!updateData.password) {
+                editMsg.innerText = "沒有要修改的內容";
+                return;
+            }
+
+            apiUpdateProfile(playerId, updateData).then(user => {
+                if (!user) {
+                    editMsg.innerText = "更新失敗";
+                    return;
+                }
+                editMsg.innerText = "更新成功";
+                editSection.style.display = "none";
+                editPasswordInput.value = "";
+                loadProfile();
+            });
+        });
+
+        document.getElementById("cancel-edit").addEventListener("click", () => {
+            editSection.style.display = "none";
+            editPasswordInput.value = "";
+            editMsg.innerText = "";
+        });
+
+        document.getElementById("delete-account").addEventListener("click", () => {
+            if (!currentUser) return;
+            const ok = confirm("確定要刪除帳號嗎？此動作無法復原。");
+            if (!ok) return;
+
+            apiDeleteAccount(playerId).then(res => {
+                if (!res || !res.success) {
+                    editMsg.innerText = (res && res.message) ? res.message : "刪除失敗";
+                    return;
+                }
+                localStorage.removeItem("playerId");
+                localStorage.removeItem("username");
+                window.location.href = "index.html";
+            });
+        });
+
+        loadProfile();
+    </script>
+</body>
+
+</html>
