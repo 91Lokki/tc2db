@@ -214,7 +214,7 @@ async function apiGetDealerCarsByBrand(brand) {
         model_id: c.modelId,
         model_name: c.modelName,
         brand: c.brandName,
-        countryName: c.countryName,
+        countryName: c.countryName || c.CountryName || "", // 確保大小寫都讀得到
         model_year: c.modelYear,
         base_price: c.basePrice,
         stock: c.stockQuantity,
@@ -240,7 +240,7 @@ async function apiGetUsedCars(q="", country="") {
         brand_name: c.brandName,
         model_name: c.modelName,
         model_year: c.modelYear,
-        countryName: c.countryName,
+        countryName: c.countryName || c.CountryName || "",
         sale_price: c.salePrice,
         listing_date: c.listingDate,
         mileage: c.mileage,
@@ -334,11 +334,17 @@ async function apiGetPlayerDetail(username) {
             bestTime: formatTime(r.FinishTime || r.finishTime),
             date: r.SeasonYear + " R" + r.Round
         }));
+        
         return {
-            username: d.Username,
+            username: d.Username || d.username,
             totalScore: d.CareerTotalPoints,
             raceCount: d.TotalRaceCount,
-            winCount: d.TotalWins,
+            
+            // ★ 新增：取得賽季獎盃數據 (對應後端 DTO)
+            seasonGold: d.Career1st || 0,
+            seasonSilver: d.Career2nd || 0,
+            seasonBronze: d.Career3rd || 0,
+            
             recentRecords: recent
         };
     }
@@ -360,4 +366,14 @@ function formatTime(ms) {
     const seconds = Math.floor((ms % 60000) / 1000);
     const milliseconds = Math.floor((ms % 1000) / 10);
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+}
+
+// [已修正] 根據年份取得賽程表 (呼叫後端 API)
+async function apiGetScheduleByYear(year) {
+    const res = await fetchAPI(`/Race/schedules/${year}`, "GET");
+    if(res.ok && Array.isArray(res.data)) {
+        // 直接回傳後端整理好的 DTO
+        return res.data;
+    }
+    return [];
 }
