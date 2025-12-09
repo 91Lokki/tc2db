@@ -849,3 +849,40 @@ tbody tr:hover {
   border: 0;
   border-top: 1px solid #eee;
 }
+
+/* =========================================
+   二手車列表圖片優化
+   (加在 style.css 最下面)
+========================================= */
+
+/* 1. 圖片容器：置中並限制最大寬度 */
+.table-img-box {
+    width: 120px;       /* 欄位寬度固定 */
+    height: 70px;       /* 高度固定，讓表格整齊 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;     /* 水平置中 */
+    background: #f9f9f9; /* 淡淡的背景色，讓白車也能看清楚 */
+    border-radius: 8px;
+    overflow: hidden;   /* 超出範圍切掉 */
+}
+
+/* 2. 圖片本體：完美填滿容器 */
+.car-thumb-large {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 保持比例填滿，不會變形 */
+    display: block;
+    transition: transform 0.3s ease; /* 加點 hover 特效 */
+}
+
+/* 3. 滑鼠移過去圖片稍微放大 */
+.table-img-box:hover .car-thumb-large {
+    transform: scale(1.1);
+}
+
+/* 4. 讓表格內容垂直置中 (防止文字跑版) */
+#used-table td {
+    vertical-align: middle;
+}
