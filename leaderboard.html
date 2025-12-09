@@ -720,7 +720,7 @@
                             // ★ 模擬完畢後，重新跑一次初始化，抓取新的下一場
                             initYearTabs(); 
                         } else {
-                            const errMsg = (res.data && (res.data.message || res.data.Message)) || "未知錯誤";
+                            const errMsg = (res.data && (res.data.message || res.data.Message)) || "你不是管理員";
                             alert("模擬失敗: " + errMsg);
                             btn.disabled = false;
                             btn.innerText = "Simulate";
