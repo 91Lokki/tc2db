@@ -11,26 +11,27 @@
 <body>
     <header class="site-header">
         <div class="header-inner">
+            <!-- 左邊：logo + 導覽連結，全靠左 -->
             <div class="header-left">
+                <div class="header-logo"> TC2 DB</div>
                 <nav class="header-nav">
-                    <a href="home.html" class="nav-link nav-link-active">HOME</a>
+                    <a href="home.html" class="nav-link nav-link-active">首頁</a>
                 </nav>
             </div>
         </div>
     </header>
-
-    <div class="app login-page">
-        <h2>Create new account</h2>
+    <div class="app">
+        <h1>Create new account</h1>
 
         <label>
-            <input type="text" id="reg-username" placeholder="Account">
-        </label>
-        
+            帳號：<br>
+            <input type="text" id="reg-username">
+        </label><br>
         <label>
-            <input type="password" id="reg-password" placeholder="Password">
-        </label>
-        
-        <button id="reg-btn">Register</button>
+            密碼：<br>
+            <input type="password" id="reg-password">
+        </label><br>
+        <button id="reg-btn">註冊</button>
         <p id="reg-msg"></p>
 
         <hr>
@@ -52,10 +53,8 @@
                 const msg = document.getElementById("reg-msg");
                 if (result.success) {
                     msg.innerText = "註冊成功，請回登入畫面登入。";
-                    msg.style.color = "green";
                 } else {
                     msg.innerText = result.message || "註冊失敗";
-                    msg.style.color = "red";
                 }
             });
         });
