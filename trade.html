@@ -106,6 +106,7 @@
     <header class="site-header">
         <div class="header-inner">
             <div class="header-left">
+                <div class="header-logo"> TC2 DB</div>
                 <nav class="header-nav">
                     <a href="home.html" class="nav-link">HOME</a>
                     <a href="leaderboard.html" class="nav-link">LEADERBOARD</a>
@@ -128,12 +129,12 @@
 
         <div class="card-container">
             <div class="card" id="card-dealer">
-                <h2> Dealership</h2>
-                <p>Brand-new models from manufacturers</p>
+                <h2>車商</h2>
+                <p>品牌商的全新車款</p>
             </div>
             <div class="card" id="card-used">
-                <h2>Used Cars</h2>
-                <p>Pre-owned cars listed by players</p>
+                <h2>中古</h2>
+                <p>玩家上架的二手車</p>
             </div>
         </div>
 
@@ -259,13 +260,6 @@
     </div>
 
     <script>
-        let currentUser = null;
-        const navIcon = document.getElementById("nav-profile-icon");
-        if (navIcon) {
-            const username = localStorage.getItem("username") || "你";
-            navIcon.textContent = username.charAt(0).toUpperCase();
-            navIcon.addEventListener("click", () => { window.location.href = "profile.html"; });
-        }
         document.addEventListener('DOMContentLoaded', () => {
             const playerId = localStorage.getItem("playerId");
             if (!playerId) { window.location.href = "index.html"; }
