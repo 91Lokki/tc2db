@@ -6,6 +6,74 @@
     <title>賽程表查詢</title>
     <link rel="stylesheet" href="style.css">
     <script src="api.js"></script>
+    <style>
+        /* --- 年份選單樣式 (與 Leaderboard 同步) --- */
+        .year-tabs-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 10px;
+        }
+
+        .year-tabs {
+            flex: 1;
+            overflow-x: auto;
+            white-space: nowrap;
+            text-align: center; /* 讓年份置中 */
+            scroll-behavior: smooth;
+            /* 隱藏卷軸 */
+            scrollbar-width: none; 
+            -ms-overflow-style: none;
+        }
+        .year-tabs::-webkit-scrollbar { display: none; }
+
+        /* 年份按鈕：無框風格 */
+        .year-tab {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 40px;
+            font-weight: 700;
+            color: #e0e0e0; /* 未選中時是淺灰色 */
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .year-tab:hover {
+            color: #999;
+        }
+
+        /* 選中狀態：深黑色、稍微放大 */
+        .year-tab.active {
+            color: #111;
+            transform: scale(2);
+        }
+
+        /* 左右箭頭按鈕 */
+        .tab-arrow {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: #fff;
+            color: #333;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .tab-arrow:hover { background: #f5f5f7; transform: scale(1.1); }
+        .tab-arrow:active { background: #e5e5ea; transform: scale(0.95); }
+    </style>
 </head>
 
 <body>
@@ -30,7 +98,10 @@
             <h1>Schedule Lookup</h1>
         </div>
 
-        <div id="year-tabs" class="year-tabs" style="margin-top: 30px;">
+        <div class="year-tabs-wrapper">
+            <button id="tab-prev" class="tab-arrow">‹</button>
+            <div id="year-tabs" class="year-tabs"></div>
+            <button id="tab-next" class="tab-arrow">›</button>
         </div>
 
         <section id="schedule-section" style="margin-top: 30px;">
@@ -38,13 +109,12 @@
                 <thead>
                     <tr>
                         <th style="width:10%;">回合</th>
-                        <th style="width:20%;">賽道名稱</th>
-                        <th style="width:10%;">賽道長度</th>
+                        <th style="width:25%;">賽道名稱</th>
                         <th style="width:15%;">日期</th>
                         <th style="width:10%;">第一名</th>
                         <th style="width:10%;">第二名</th>
                         <th style="width:10%;">第三名</th>
-                        <th style="width:15%;">狀態</th>
+                        <th style="width:20%;">狀態</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -55,13 +125,25 @@
 
     <script>
         const playerId = localStorage.getItem("playerId");
-        if (!playerId) { window.location.href = "index.html"; }
+        // 允許不登入瀏覽，只做頭像切換
+        const isLoggedIn = !!playerId;
 
         const navIcon = document.getElementById("nav-profile-icon");
         if (navIcon) {
-            const username = localStorage.getItem("username") || "你";
-            navIcon.textContent = username.charAt(0).toUpperCase();
-            navIcon.addEventListener("click", () => { window.location.href = "profile.html"; });
+            if (isLoggedIn) {
+                const username = localStorage.getItem("username") || "U";
+                navIcon.textContent = username.charAt(0).toUpperCase();
+                navIcon.onclick = () => window.location.href = "profile.html";
+            } else {
+                navIcon.textContent = "登入";
+                navIcon.style.width = "auto";
+                navIcon.style.borderRadius = "8px";
+                navIcon.style.padding = "0 10px";
+                navIcon.style.fontSize = "14px";
+                navIcon.style.background = "#0071e3";
+                navIcon.style.color = "white";
+                navIcon.onclick = () => window.location.href = "login.html";
+            }
         }
 
         let currentYear = null;
@@ -71,72 +153,101 @@
         function initYearTabs() {
             apiGetYears().then(years => {
                 yearTabsContainer.innerHTML = "";
+                
+                // 排序：小到大
+                if(Array.isArray(years)) {
+                    years.sort((a, b) => a - b);
+                } else {
+                    years = [2024];
+                }
 
-                // 預設選取最新年份
-                if (!currentYear || !years.includes(Number(currentYear))) {
+                // 預設選最後一個 (最新的)
+                if (!currentYear) {
                     currentYear = years[years.length - 1];
                 }
 
                 years.forEach(y => {
+                    // 賽程表通常不需要顯示 "all"
+                    if(y === 'all') return;
+
                     const tab = document.createElement("div");
-                    tab.className = `year-tab ${y == currentYear ? 'active' : ''}`;
+                    tab.className = 'year-tab'; // 基本樣式
+                    if (y == currentYear) tab.classList.add('active'); // 選中樣式
+                    
                     tab.textContent = y;
+                    
                     tab.addEventListener("click", () => {
+                        // 移除其他人的 active
                         document.querySelectorAll(".year-tab").forEach(t => t.classList.remove("active"));
+                        // 自己加上 active
                         tab.classList.add("active");
+                        
+                        // 滾動置中
+                        tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
                         currentYear = y;
                         loadSchedule(currentYear);
                     });
                     yearTabsContainer.appendChild(tab);
                 });
 
-                // 確保捲軸捲到最右邊 (最新的年份)
-                setTimeout(() => {
-                    yearTabsContainer.scrollLeft = yearTabsContainer.scrollWidth;
-                }, 100);
+                // ★ 新增：箭頭功能
+                const btnPrev = document.getElementById("tab-prev");
+                const btnNext = document.getElementById("tab-next");
+                if(btnPrev) btnPrev.onclick = () => yearTabsContainer.scrollBy({ left: -200, behavior: 'smooth' });
+                if(btnNext) btnNext.onclick = () => yearTabsContainer.scrollBy({ left: 200, behavior: 'smooth' });
 
+                // 載入資料
                 loadSchedule(currentYear);
             });
         }
 
-        // ★ 新增：載入賽程表資料的函式
-        // ★ 修正：載入賽程表資料的函式 (包含結果顯示)
         function loadSchedule(year) {
-            scheduleBody.innerHTML = `<tr><td colspan="8">載入 ${year} 年賽程中...</td></tr>`; // colspan 改為 8
+            scheduleBody.innerHTML = `<tr><td colspan="7">載入 ${year} 年賽程中...</td></tr>`;
 
-            if (typeof apiGetScheduleByYear === 'function') {
-                apiGetScheduleByYear(year).then(scheduleList => {
-                    scheduleBody.innerHTML = "";
-                    if (scheduleList.length === 0) {
-                        scheduleBody.innerHTML = `<tr><td colspan="8">${year} 年度尚無賽程資料。</td></tr>`;
-                        return;
+            apiGetScheduleByYear(year).then(scheduleList => {
+                scheduleBody.innerHTML = "";
+                
+                if (!scheduleList || scheduleList.length === 0) {
+                    scheduleBody.innerHTML = `<tr><td colspan="7">${year} 年度尚無賽程資料。</td></tr>`;
+                    return;
+                }
+
+                scheduleList.forEach(item => {
+                    const tr = document.createElement("tr");
+                    
+                    let statusHtml = "";
+                    if (item.isCompleted) {
+                        statusHtml = `<span style="color:#34c759; font-weight:bold;">已完賽 ✅</span>`;
+                    } else {
+                        statusHtml = `<span style="color:#ff9500; font-weight:bold;">即將到來 🗓️</span>`;
                     }
 
-                    scheduleList.forEach(item => {
-                        const tr = document.createElement("tr");
-                        const statusText = item.is_completed ? "已完成 ✅" : "即將到來 🗓️";
-                        const dateText = item.raceDate || '待定';
-                        
-                        // 根據狀態決定是否顯示前三名
-                        const p1 = item.is_completed ? item.top1 : '-';
-                        const p2 = item.is_completed ? item.top2 : '-';
-                        const p3 = item.is_completed ? item.top3 : '-';
-                        
-                        tr.innerHTML = `
-                            <td>Round ${item.round}</td>
-                            <td>${item.trackName}</td>
-                            <td>${item.trackLength}</td>
-                            <td>${dateText}</td>
-                            <td>${p1}</td>   <td>${p2}</td>   <td>${p3}</td>   <td>${statusText}</td>
-                        `;
-                        scheduleBody.appendChild(tr);
-                    });
-                }).catch(() => {
-                    scheduleBody.innerHTML = `<tr><td colspan="8">無法取得賽程資料，請檢查 API 連線。</td></tr>`;
+                    const dateText = item.raceDate || '待定';
+                    const p1 = item.top1 || '-';
+                    const p2 = item.top2 || '-';
+                    const p3 = item.top3 || '-';
+                    
+                    tr.innerHTML = `
+                        <td>Round ${item.roundNumber}</td>
+                        <td>
+                            <a href="leaderboard.html?mode=track&target=${encodeURIComponent(item.trackName)}" 
+                               style="color:#0071e3; text-decoration:none; font-weight:600;">
+                               ${item.trackName}
+                            </a>
+                        </td>
+                        <td style="font-family:monospace;">${dateText}</td>
+                        <td style="color:#d4af37; font-weight:600;">${p1}</td>
+                        <td style="color:#c0c0c0; font-weight:600;">${p2}</td>
+                        <td style="color:#cd7f32; font-weight:600;">${p3}</td>
+                        <td>${statusHtml}</td>
+                    `;
+                    scheduleBody.appendChild(tr);
                 });
-            } else {
-                 scheduleBody.innerHTML = `<tr><td colspan="8">等待 apiGetScheduleByYear 函式實作...</td></tr>`;
-            }
+            }).catch(err => {
+                console.error(err);
+                scheduleBody.innerHTML = `<tr><td colspan="7">無法取得賽程資料，請檢查後端連線。</td></tr>`;
+            });
         }
 
         initYearTabs();
