@@ -118,6 +118,8 @@ async function apiGetProfile(playerId) {
             raceCount: d.TotalRaceCount || d.totalRaceCount || 0,
             // ★ 分開兩種冠軍數據
             raceWins: d.TotalWins || d.totalWins || 0, // 分站冠軍 (贏過幾場比賽)
+
+            podiums: d.TotalPodiums || d.totalPodiums || 0,
             
             // ★ 這是賽季排名的金銀銅杯
             seasonGold: d.Career1st || d.career1st || 0,
@@ -332,18 +334,27 @@ async function apiGetPlayerDetail(username) {
         const recent = (d.RecentRaces || d.recentRaces || []).map(r => ({
             trackName: r.TrackName || r.trackName,
             bestTime: formatTime(r.FinishTime || r.finishTime),
-            date: r.SeasonYear + " R" + r.Round
+            // 這裡也要防呆，避免屬性抓不到
+            date: (r.SeasonYear || r.seasonYear) + " R" + (r.Round || r.round)
         }));
         
         return {
             username: d.Username || d.username,
-            totalScore: d.CareerTotalPoints,
-            raceCount: d.TotalRaceCount,
             
-            // ★ 新增：取得賽季獎盃數據 (對應後端 DTO)
-            seasonGold: d.Career1st || 0,
-            seasonSilver: d.Career2nd || 0,
-            seasonBronze: d.Career3rd || 0,
+            // ★ 修正重點：加上小寫相容 (camelCase) 與預設值 0
+            totalScore: d.CareerTotalPoints || d.careerTotalPoints || 0,
+            raceCount: d.TotalRaceCount || d.totalRaceCount || 0,
+
+            // ★ 新增：小卡需要的豐富數據
+            currentRank: d.CurrentRank || d.currentRank || "-",        // 目前排名
+            raceWins: d.TotalWins || d.totalWins || 0,                 // 分站冠軍數
+            podiums: d.TotalPodiums || d.totalPodiums || 0,            // 上頒獎台次數
+            regDate: d.RegDate || d.regDate,
+            
+            // 賽季獎盃數據
+            seasonGold: d.Career1st || d.career1st || 0,
+            seasonSilver: d.Career2nd || d.career2nd || 0,
+            seasonBronze: d.Career3rd || d.career3rd || 0,
             
             recentRecords: recent
         };

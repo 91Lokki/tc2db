@@ -303,7 +303,7 @@
             </div>
             <div class="card" id="card-track">
                 <h2>Track Records</h2>
-                <p>Fastest Laps</p>
+                <p>Fastest Records</p>
             </div>
         </div>
 
@@ -720,7 +720,7 @@
                             // ★ 模擬完畢後，重新跑一次初始化，抓取新的下一場
                             initYearTabs(); 
                         } else {
-                            const errMsg = (res.data && (res.data.message || res.data.Message)) || "你不是管理員";
+                            const errMsg = (res.data && (res.data.message || res.data.Message)) || "未知錯誤";
                             alert("模擬失敗: " + errMsg);
                             btn.disabled = false;
                             btn.innerText = "Simulate";
@@ -743,14 +743,30 @@
         const trackGrid = document.getElementById("track-grid-container");
 
         // 載入賽道列表 (存入緩存)
-        function loadTrackList() {
+       function loadTrackList() {
             trackListView.style.display = "block";
             trackDetailView.style.display = "none";
             trackGrid.innerHTML = "載入中...";
 
             apiGetTracks().then(tracks => {
-                allTracksData = tracks || []; // ★ 存起來
+                allTracksData = tracks || []; 
                 renderTrackGrid(allTracksData);
+
+                // ★ 新增：檢查網址是否有指定賽道 (Deep Linking)
+                const params = new URLSearchParams(window.location.search);
+                const targetName = params.get('target');
+                
+                // 如果有指定 target，且該賽道存在於資料中
+                if (targetName) {
+                    const targetTrack = allTracksData.find(t => t.name === targetName);
+                    if (targetTrack) {
+                        // 自動點擊進入詳情
+                        openTrackDetail(targetTrack);
+                        
+                        // (選用) 清除網址參數，讓使用者重新整理時回到列表，體驗較好
+                        window.history.replaceState({}, document.title, "leaderboard.html");
+                    }
+                }
             });
         }
 
@@ -863,29 +879,100 @@
             const modal = document.getElementById("player-modal");
             const overlay = document.getElementById("player-modal-overlay");
             const content = document.getElementById("player-modal-content");
+            
             content.innerHTML = '<div style="text-align:center; padding:30px; color:#888;">資料讀取中...</div>';
             modal.classList.add("show");
             overlay.classList.add("show");
             
             apiGetPlayerDetail(username).then(data => {
-                if (!data) { content.innerHTML = "找不到資料"; return; }
-                const gold = data.winCount || 0;
+                if (!data) { 
+                    content.innerHTML = '<div style="text-align:center; padding:20px;">找不到該玩家資料</div>'; 
+                    return; 
+                }
+
+                const gold = data.seasonGold || 0;
+                const silver = data.seasonSilver || 0;
+                const bronze = data.seasonBronze || 0;
+                // ★ 格式化註冊日期
+                const regDateText = data.regDate ? new Date(data.regDate).toLocaleDateString("zh-TW") : "-";
+
                 let html = `
                     <div style="background:#fff; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05); margin-bottom:24px;">
-                        <h2 style="margin:0 0 20px 0;">帳號：${data.username}</h2>
-                        <div style="display:flex; justify-content:space-between;">
-                            <div><div style="font-size:13px; color:#888;">生涯總分</div><div style="font-size:28px; font-weight:700;">${data.totalScore.toLocaleString()}</div></div>
-                            <div><div style="font-size:13px; color:#888;">參賽次數</div><div style="font-size:28px; font-weight:700;">${data.raceCount}</div></div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h2 style="margin:0; font-size:28px;">${data.username}</h2>
+                            <div style="text-align:right;">
+                                <div style="font-size:12px; color:#888;">目前排名</div>
+                                <div style="font-size:20px; font-weight:800; color:#0071e3;">${data.currentRank}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="font-size:24px; margin-bottom:20px; font-weight:700; text-align:center; background:#f9f9f9; padding:10px; border-radius:12px;">
+                            🥇${gold} <span style="font-size:18px; color:#ddd; margin:0 5px;">|</span> 
+                            🥈${silver} <span style="font-size:18px; color:#ddd; margin:0 5px;">|</span> 
+                            🥉${bronze}
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; border-top:1px solid #eee; padding-top:15px;">
+                            
+                            <div>
+                                <div style="font-size:12px; color:#888;">生涯總積分</div>
+                                <div style="font-size:18px; font-weight:600;">${data.totalScore.toLocaleString()}</div>
+                            </div>
+                            
+                            <div>
+                                <div style="font-size:12px; color:#888;">分站冠軍 (Wins)</div>
+                                <div style="font-size:18px; font-weight:600;">${data.raceWins}</div>
+                            </div>
+
+                            <div>
+                                <div style="font-size:12px; color:#888;">完賽次數</div>
+                                <div style="font-size:18px; font-weight:600;">${data.raceCount}</div>
+                            </div>
+
+                            <div>
+                                <div style="font-size:12px; color:#888;">上頒獎台 (Podiums)</div>
+                                <div style="font-size:18px; font-weight:600;">${data.podiums}</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:15px; padding-top:10px; border-top:1px solid #eee; text-align:right; font-size:12px; color:#aaa;">
+                            註冊時間：${regDateText}
                         </div>
                     </div>
-                    <h3>最近賽事</h3>
-                    <table class="small-table"><thead><tr><th>日期</th><th>賽道</th><th>成績</th></tr></thead><tbody>`;
-                if(data.recentRecords) {
+
+                    <h3 style="margin-bottom:10px;">最近 10 場賽事</h3>
+                    <div style="max-height: 250px; overflow-y: auto;">
+                        <table class="small-table" style="width:100%; border-collapse:collapse;">
+                            <thead style="position:sticky; top:0; background:#fff;">
+                                <tr style="border-bottom:2px solid #f5f5f7;">
+                                    <th style="padding:8px; text-align:left; font-size:12px; color:#999;">日期</th>
+                                    <th style="padding:8px; text-align:left; font-size:12px; color:#999;">賽道</th>
+                                    <th style="padding:8px; text-align:right; font-size:12px; color:#999;">成績</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                
+                if(data.recentRecords && data.recentRecords.length > 0) {
                     data.recentRecords.forEach(r => {
-                        html += `<tr><td>${r.date}</td><td>${r.trackName}</td><td>${r.bestTime}</td></tr>`;
+                        html += `
+                            <tr style="border-bottom:1px solid #f9f9f9;">
+                                <td style="padding:10px 8px; font-size:14px; color:#666;">${r.date}</td>
+                                <td style="padding:10px 8px; font-weight:600;">
+                                    <a href="leaderboard.html?mode=track&target=${encodeURIComponent(r.trackName)}" 
+                                       style="color:#0071e3; text-decoration:none;">
+                                       ${r.trackName}
+                                    </a>
+                                </td>
+                                <td style="padding:10px 8px; text-align:right; font-family:monospace; font-size:14px;">${r.bestTime}</td>
+                            </tr>`;
                     });
+                } else {
+                    html += `<tr><td colspan="3" style="text-align:center; padding:20px; color:#999;">尚無參賽紀錄</td></tr>`;
                 }
-                html += `</tbody></table>`;
+
+                html += `</tbody></table></div>`;
+                
+
                 content.innerHTML = html;
             });
         }
@@ -897,7 +984,18 @@
             document.getElementById("player-modal").classList.remove("show");
             document.getElementById("player-modal-overlay").classList.remove("show");
         });
+document.getElementById("player-modal-overlay").addEventListener("click", () => {
+            document.getElementById("player-modal").classList.remove("show");
+            document.getElementById("player-modal-overlay").classList.remove("show");
+        });
 
+        // ★ 新增：網頁載入時，檢查網址參數
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'track') {
+            // 如果網址指定 mode=track，自動切換到賽道榜
+            // switchMode 會呼叫 loadTrackList，然後 loadTrackList 會處理 target
+            switchMode('track');
+        }
     </script>
 </body>
 </html>
