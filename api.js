@@ -52,63 +52,6 @@ async function fetchAPI(endpoint, method = 'GET', body = null) {
     }
 }
 
-// ==========================================
-// 1. 靜態資料表 (Static Data Tables)
-// ==========================================
-
-const DB_COUNTRIES = [
-  { country_id: 1, country_name: "Japan", flag_url: "img/flag-jp.png" },
-  { country_id: 2, country_name: "Germany", flag_url: "img/flag-de.png" },
-  { country_id: 3, country_name: "Italy", flag_url: "img/flag-it.png" },
-  { country_id: 4, country_name: "USA", flag_url: "img/flag-us.png" },
-  { country_id: 5, country_name: "UK", flag_url: "img/flag-gb.png" },
-  { country_id: 6, country_name: "France", flag_url: "img/flag-fr.png" }
-];
-
-const DB_BRANDS = [
-  { brand_id: 1, country_id: 1, brand_name: "Honda", logo_url: "img/brand-honda.png" },
-  { brand_id: 2, country_id: 1, brand_name: "Toyota", logo_url: "img/brand-toyota.png" },
-  { brand_id: 3, country_id: 1, brand_name: "Nissan", logo_url: "img/brand-nissan.png" },
-  { brand_id: 4, country_id: 2, brand_name: "BMW", logo_url: "img/brand-bmw.png" },
-  { brand_id: 5, country_id: 2, brand_name: "Mercedes-Benz", logo_url: "img/brand-mercedes.png" },
-  { brand_id: 6, country_id: 2, brand_name: "Audi", logo_url: "img/brand-audi.png" },
-  { brand_id: 7, country_id: 2, brand_name: "Porsche", logo_url: "img/brand-porsche.png" },
-  { brand_id: 8, country_id: 3, brand_name: "Ferrari", logo_url: "img/brand-ferrari.png" },
-  { brand_id: 9, country_id: 3, brand_name: "Lamborghini", logo_url: "img/brand-lamborghini.png" },
-  { brand_id: 10, country_id: 1, brand_name: "Mazda", logo_url: "img/brand-mazda.png" },
-  { brand_id: 11, country_id: 1, brand_name: "Subaru", logo_url: "img/brand-subaru.png" },
-  { brand_id: 12, country_id: 4, brand_name: "Ford", logo_url: "img/brand-ford.png" },
-  { brand_id: 13, country_id: 4, brand_name: "Chevrolet", logo_url: "img/brand-chevrolet.png" },
-  { brand_id: 14, country_id: 4, brand_name: "Dodge", logo_url: "img/brand-dodge.png" }
-];
-
-const DB_CAR_MODELS = [
-  { model_id: 201, brand_id: 1, model_name: "Civic Type R", model_year: 2023, base_price: 150000, top_speed: 272, power: 315, stock_quantity: 50, car_url: "img/car-honda-civic-type-r.png" },
-  { model_id: 202, brand_id: 1, model_name: "NSX", model_year: 2022, base_price: 350000, top_speed: 307, power: 573, stock_quantity: 10, car_url: "img/car-honda-nsx.png" },
-  { model_id: 203, brand_id: 2, model_name: "Supra GR", model_year: 2023, base_price: 180000, top_speed: 250, power: 382, stock_quantity: 40, car_url: "img/car-toyota-supra-gr.png" },
-  { model_id: 204, brand_id: 2, model_name: "GR86", model_year: 2023, base_price: 120000, top_speed: 225, power: 228, stock_quantity: 100, car_url: "img/car-toyota-gr86.png" },
-  { model_id: 205, brand_id: 3, model_name: "GT-R", model_year: 2024, base_price: 300000, top_speed: 315, power: 565, stock_quantity: 15, car_url: "img/car-nissan-gtr.png" },
-  { model_id: 206, brand_id: 4, model_name: "M4", model_year: 2024, base_price: 250000, top_speed: 290, power: 503, stock_quantity: 30, car_url: "img/car-bmw-m4.png" },
-  { model_id: 207, brand_id: 4, model_name: "M2 Competition", model_year: 2021, base_price: 220000, top_speed: 280, power: 405, stock_quantity: 35, car_url: "img/car-bmw-m2.png" },
-  { model_id: 208, brand_id: 5, model_name: "AMG C63", model_year: 2023, base_price: 270000, top_speed: 290, power: 503, stock_quantity: 25, car_url: "img/car-mercedes-amg-c63.png" },
-  { model_id: 209, brand_id: 6, model_name: "RS5", model_year: 2023, base_price: 260000, top_speed: 280, power: 444, stock_quantity: 25, car_url: "img/car-audi-rs5.png" },
-  { model_id: 210, brand_id: 7, model_name: "911 Carrera", model_year: 2024, base_price: 400000, top_speed: 293, power: 379, stock_quantity: 12, car_url: "img/car-porsche-911.png" },
-  { model_id: 211, brand_id: 9, model_name: "Huracán EVO", model_year: 2023, base_price: 600000, top_speed: 325, power: 630, stock_quantity: 5, car_url: "img/car-lamborghini-huracan.png" },
-  { model_id: 212, brand_id: 8, model_name: "488 GTB", model_year: 2020, base_price: 650000, top_speed: 330, power: 660, stock_quantity: 3, car_url: "img/car-ferrari-488.png" },
-  { model_id: 213, brand_id: 11, model_name: "WRX STI", model_year: 2021, base_price: 140000, top_speed: 250, power: 310, stock_quantity: 60, car_url: "img/car-subaru-wrx-sti.png" },
-  { model_id: 214, brand_id: 10, model_name: "RX-7 Spirit R", model_year: 2002, base_price: 200000, top_speed: 250, power: 276, stock_quantity: 5, car_url: "img/car-mazda-rx7.png" },
-  { model_id: 226, brand_id: 12, model_name: "Mustang GT", model_year: 2024, base_price: 240000, top_speed: 250, power: 480, stock_quantity: 80, car_url: "img/car-ford-mustang-gt.png" },
-  { model_id: 222, brand_id: 13, model_name: "Corvette C7 ZR1", model_year: 2019, base_price: 240000, top_speed: 341, power: 755, stock_quantity: 8, car_url: "img/car-chevrolet-corvette-zr1.png" },
-  { model_id: 224, brand_id: 14, model_name: "Challenger SRT Hellcat", model_year: 2023, base_price: 240000, top_speed: 320, power: 717, stock_quantity: 20, car_url: "img/car-dodge-challenger-hellcat.png" }
-];
-
-const DB_TRACKS = [
-  { track_id: 1, track_name: "New York Rush", length: "5.2 km", track_url: "img/track-ny.jpg" },
-  { track_id: 2, track_name: "Tokyo Express", length: "4.8 km", track_url: "img/track-tokyo.jpg" },
-  { track_id: 3, track_name: "San Francisco", length: "6.1 km", track_url: "img/track-sf.jpg" },
-  { track_id: 4, track_name: "Las Vegas Final", length: "7.5 km", track_url: "img/track-vegas.jpg" }
-];
-
 const AVAILABLE_YEARS = [2023, 2024, 2025];
 
 // ==========================================
