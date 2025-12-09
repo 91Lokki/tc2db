@@ -18,18 +18,19 @@
             </div>
         </div>
     </header>
-    <div class="app">
-        <h1>Create new account</h1>
+
+    <div class="app login-page">
+        <h2>Create new account</h2>
 
         <label>
-            帳號：<br>
-            <input type="text" id="reg-username" placeholder="帳號">
-        </label><br>
+            <input type="text" id="reg-username" placeholder="Account">
+        </label>
+        
         <label>
-            密碼：<br>
-            <input type="password" id="reg-password" placeholder="密碼">
-        </label><br>
-        <button id="reg-btn">註冊</button>
+            <input type="password" id="reg-password" placeholder="Password">
+        </label>
+        
+        <button id="reg-btn">Register</button>
         <p id="reg-msg"></p>
 
         <hr>
@@ -51,8 +52,10 @@
                 const msg = document.getElementById("reg-msg");
                 if (result.success) {
                     msg.innerText = "註冊成功，請回登入畫面登入。";
+                    msg.style.color = "green";
                 } else {
                     msg.innerText = result.message || "註冊失敗";
+                    msg.style.color = "red";
                 }
             });
         });
