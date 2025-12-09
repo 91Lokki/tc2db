@@ -561,17 +561,6 @@ tbody tr:hover {
   justify-content: center;
 }
 
-.car-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-}
-
-.car-name {
-  font-size: 12px;
-}
-
 /* =========================================
    排行榜頁面專用樣式 (Leaderboard)
    ========================================= */
@@ -760,6 +749,23 @@ tbody tr:hover {
     vertical-align: middle;
 }
 
+.car-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* 建議稍微加大一點間距，原本 8px 有點擠 */
+  
+  /* ▼▼▼ 修改這裡 ▼▼▼ */
+  justify-content: flex-start; /* 原本是 center，改成 flex-start (靠左對齊) */
+  padding-left: 10%; /* 增加一點左邊內距，讓它視覺上不會貼死在格子最左邊，且保持圖片對齊 */
+  /* ▲▲▲ 修改結束 ▲▲▲ */
+}
+
+/* 建議順便加一個設定，確保車名太長時文字靠左 */
+.car-name {
+  font-size: 13px; /* 原本 12px 有點小 */
+  text-align: left;
+  font-weight: 600; /* 加粗一點比較好看 */
+}
 /* --- 修復：車商內的車圖 --- */
 /* 確保車圖在表格內有固定大小 */
 .car-thumb {
@@ -770,8 +776,80 @@ tbody tr:hover {
     background-color: #eee; /* 預設底色 */
 }
 
-/* 確保表格內的圖片容器置中 */
-td img {
-    display: block;
-    margin: 0 auto;
+/* 1. 把寬度縮小，變成一張卡片 */
+.app.login-page {
+  max-width: 360px; /* 覆蓋原本的 1000px，登入框窄一點比較好看 */
+  margin: 60px auto; /* 上下留白更多 */
+  background: #ffffff; /* 卡片白底 */
+  border-radius: 24px; /* 圓角 */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1); /* 加強陰影，讓它浮起來 */
+  text-align: center; /* 內容置中 */
+  padding: 40px 30px; /* 卡片內部留白 */
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* 2. 針對登入頁的輸入框調整 */
+.app.login-page input {
+  display: block; /* 讓輸入框獨佔一行 */
+  width: 100%;    /* 填滿卡片寬度 */
+  margin-bottom: 16px; /* 輸入框之間的距離 */
+  padding: 12px;  /* 增加高度，打字比較舒服 */
+  font-size: 15px;
+}
+
+/* 3. 移除原本包 input 的 label 影響 */
+.app.login-page label {
+  width: 100%;
+  display: block;
+}
+
+/* 4. 主要操作按鈕 (Login & Register) */
+#login-btn,
+#reg-btn {
+  width: 100%;
+  margin-top: 8px;
+  background: #000;
+  color: #fff;
+  padding: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: none;
+  transition: background 0.2s, transform 0.1s;
+}
+
+#login-btn:hover,
+#reg-btn:hover {
+  background: #333;
+  transform: scale(1.02);
+}
+
+/* 5. 次要操作按鈕 (Create new account & Back to login) */
+#go-register,
+#back-login {
+  width: 100%;
+  background: #f5f5f7;
+  color: #111;
+  border: 1px solid rgba(0,0,0,0.1);
+  padding: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* 讓這些次要按鈕 Hover 時也變黑底白字 */
+#go-register:hover,
+#back-login:hover {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+  transform: scale(1.02);
+}
+
+.app.login-page hr {
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px solid #eee;
 }
