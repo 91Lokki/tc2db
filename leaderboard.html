@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>LEADERBOARD</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="api.js"></script>
+    <style>
+        /* --- 賽道卡片樣式 --- */
+        .track-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+        .track-card {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .track-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+        }
+        .track-card-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        .track-card-body {
+            padding: 16px;
+        }
+        .track-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            color: #1d1d1f;
+        }
+
+        /* --- 篩選工具列樣式 (填滿寬度) --- */
+        .filter-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-top: 20px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1; /* ★ 關鍵：讓每個輸入框平均分配寬度 */
+            min-width: 200px;
+        }
+        .filter-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-left: 2px;
+        }
+        .filter-input {
+            padding: 10px 12px;
+            border: 1px solid #d1d1d6;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 100%; /* 填滿容器 */
+        }
+        
+        /* --- 1. 儀表板 (Dashboard) --- */
+        .dashboard-container {
+            background: #fff;
+            border-radius: 18px;
+            padding: 24px;
+            
+            /* 卡片本身在頁面置中 */
+            margin: 20px auto; 
+            max-width: 900px;
+            
+            /* ★ 關鍵設定：內容排版 ★ */
+            display: flex;
+            flex-direction: row;     /* 左圖右文 */
+            align-items: center;     /* 垂直置中 (讓文字區塊上下居中) */
+            justify-content: center; /* ★ 水平置中 (讓圖+文的組合在卡片正中間) ★ */
+            text-align: left;        /* 文字內容靠左對齊 (比較整齊) */
+            gap: 40px;               /* 拉開圖片與文字的間距，比較大氣 */
+            
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.04);
+        }
+
+        /* 圖片樣式 */
+        .dash-img {
+            width: 320px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            flex-shrink: 0; /* 禁止圖片被壓縮 */
+        }
+
+        /* Final 狀態專用：無框、無陰影、透明底 */
+        .dash-img-final {
+            box-shadow: none !important;
+            background: transparent !important;
+            border-radius: 0 !important;
+            object-fit: contain !important;
+        }
+
+        /* 文字區塊：讓它不要太寬，保持緊湊 */
+        .dash-info {
+            flex: 0 1 auto; /* 彈性調整寬度，但不強迫撐滿 */
+            min-width: 300px;
+        }
+        .dash-badge {
+            display: inline-block;
+            background: #000;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .dash-badge.final { background: #ff3b30; } /* 紅色 Final */
+        
+        .dash-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            color: #1d1d1f;
+        }
+        .dash-meta {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .dash-btn {
+            background: #0071e3;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dash-btn:hover { background: #005bb5; transform: scale(1.02); }
+        .dash-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        
+        /* 即時搜尋框樣式 */
+        .instant-search {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d1d6;
+            border-radius: 10px;
+            font-size: 15px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>');
+            background-repeat: no-repeat;
+            background-position: 10px center;
+            padding-left: 36px; /* 留位置給 icon */
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-container { flex-direction: column; text-align: center; }
+            .dash-img { width: 100%; height: auto; }
+            .filter-group { min-width: 100%; }
+        }
+        /* --- 2. 賽道詳情頭部 --- */
+        .track-detail-header {
+            background: #fff;
+            border-radius: 16px;
+            padding: 30px; /* 加大內距 */
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+
+            /* ★ 關鍵設定：內容排版 ★ */
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center; /* ★ 水平置中 ★ */
+            text-align: left;
+            gap: 40px;
+        }
+
+        /* 賽道詳情圖片 */
+        .track-header-img {
+            width: 360px; /* 這裡圖片可以稍微大一點 */
+            height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        /* --- RWD: 手機版自動變回垂直排列 --- */
+        @media (max-width: 768px) {
+            .dashboard-container, 
+            .track-detail-header {
+                flex-direction: column; /* 改為垂直 */
+                text-align: center;     /* 文字改為置中 */
+                padding: 20px;
+                gap: 20px;
+            }
+            .dash-img, 
+            .track-header-img {
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+            }
+            .dash-info {
+                min-width: auto;
+                width: 100%;
+            }
+        }
+        /* --- 年份選單容器 (包含箭頭) --- */
+        .year-tabs-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            max-width: 960px; /* 稍微加寬以容納箭頭 */
+            margin: 30px auto;
+            padding: 0 10px;
+        }
+
+        /* 隱藏原本的 margin，改由 wrapper 控制 */
+        .year-tabs {
+            margin: 0; 
+            flex: 1; /* 填滿中間空間 */
+            scroll-behavior: smooth; /* 讓 JS 滑動時有平滑效果 */
+        }
+
+        /* 左右箭頭按鈕樣式 */
+        .tab-arrow {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: #fff;
+            color: #333;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0; /* 防止按鈕被壓縮 */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .tab-arrow:hover {
+            background: #f5f5f7;
+            transform: scale(1.1);
+        }
+
+        .tab-arrow:active {
+            background: #e5e5ea;
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <nav class="header-nav">
+                    <a href="home.html" class="nav-link">HOME</a>
+                    <a href="leaderboard.html" class="nav-link nav-link-active">LEADERBOARD</a>
+                    <a href="trade.html" class="nav-link">SHOP</a>
+                    <a href="schedule.html" class="nav-link">SCHEDULE</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div class="profile-icon" id="nav-profile-icon"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="app">
+        <div class="top-bar">
+            <h1>LEADERBOARD</h1>
+        </div>
+
+        <div class="card-container">
+            <div class="card" id="card-score">
+                <h2>積分榜</h2>
+                <p>年度排名</p>
+            </div>
+            <div class="card" id="card-track">
+                <h2>賽道榜</h2>
+                <p>最速紀錄</p>
+            </div>
+        </div>
+
+        <div class="year-tabs-wrapper" style="display: none;">
+            <button id="tab-prev" class="tab-arrow">‹</button>
+            <div id="year-tabs" class="year-tabs"></div>
+            <button id="tab-next" class="tab-arrow">›</button>
+        </div>
+        
+        <section id="score-section" style="display:none;">
+            
+            <div id="race-dashboard" class="dashboard-container" style="display:none;">
+                <img id="dash-img" src="" class="dash-img">
+                
+                <div class="dash-info">
+                    <span id="dash-badge" class="dash-badge">NEXT RACE</span>
+                    <h2 id="dash-track-name" class="dash-title">--</h2>
+                    <div id="dash-meta" class="dash-meta">Round -- | Date: --</div>
+                    <button id="dash-btn" class="dash-btn">Simulate</button>
+                    <p id="dash-msg" style="margin-top:10px; color:green; font-weight:500;"></p>
+                </div>
+            </div>
+            <div class="section-row" style="margin-bottom: 15px;">
+                <div class="panel" style="flex:1;">
+                    <input type="text" id="score-search-input" class="instant-search" placeholder="搜尋玩家...">
+                </div>
+            </div>
+
+            <table id="score-table">
+                <colgroup>
+                    <col style="width:10%;">
+                    <col style="width:25%;">
+                    <col style="width:15%;">
+                    <col style="width:15%;">
+                    <col style="width:15%;">
+                    <col style="width:20%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>名次</th>
+                        <th>帳號</th>
+                        <th>分站冠軍</th>
+                        <th>頒獎台</th>
+                        <th>完賽</th>
+                        <th>積分</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <section id="track-section" style="display:none; margin-top: 30px;">
+            
+            <div id="track-list-view">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <input type="text" id="track-list-search" class="instant-search" style="width:250px;" placeholder="搜尋賽道...">
+                </div>
+                
+                <div id="track-grid-container" class="track-grid"></div>
+            </div>
+
+            <div id="track-detail-view" style="display:none;">
+                <button id="back-to-tracks" style="margin-bottom:15px; background:#e5e5ea; border:none; padding:8px 16px; border-radius:20px; font-weight:600; cursor:pointer;">← 返回賽道列表</button>
+                
+                <div class="track-detail-header">
+                    <img id="detail-track-img" src="" class="track-header-img">
+                    
+                    <div>
+                        <h2 id="detail-track-name" style="margin:0 0 8px 0; font-size:32px; font-weight:700;">--</h2>
+                        <p style="color:#666; margin:0; font-size: 16px;">
+                            單圈長度: <span id="detail-track-length" style="font-weight:bold; color:#1d1d1f;">--</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="filter-toolbar">
+                    <div class="filter-group" style="flex:0 0 150px; min-width:auto;">
+
+                        <select id="filter-year" class="filter-input">
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+
+                        <input type="text" id="filter-player" class="filter-input" placeholder="搜尋玩家...">
+                    </div>
+                    <div class="filter-group">
+ 
+                        <input type="text" id="filter-car" class="filter-input" placeholder="搜尋車款...">
+                    </div>
+                </div>
+
+                <table id="track-table" style="margin-top: 20px;">
+                    <colgroup>
+                        <col style="width:10%;">
+                        <col style="width:20%;">
+                        <col style="width:25%;">
+                        <col style="width:20%;">
+                        <col style="width:25%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>名次</th>
+                            <th>帳號</th>
+                            <th>車輛</th>
+                            <th>時間</th>
+                            <th>日期</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div> </section>
+
+        <div id="player-modal-overlay" class="modal-overlay"></div>
+        <div id="player-modal" class="modal">
+            <div class="modal-header">
+                <h3>玩家資料</h3>
+                <button id="player-modal-close" class="modal-close">×</button>
+            </div>
+            <div id="player-modal-content" class="modal-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 初始化 ---
+        const playerId = localStorage.getItem("playerId");
+        if (!playerId) window.location.href = "index.html";
+
+        const navIcon = document.getElementById("nav-profile-icon");
+        if (navIcon) {
+            const username = localStorage.getItem("username") || "你";
+            navIcon.textContent = username.charAt(0).toUpperCase();
+            navIcon.addEventListener("click", () => window.location.href = "profile.html");
+        }
+
+        // 頁面元素
+        const scoreSection = document.getElementById("score-section");
+        const trackSection = document.getElementById("track-section");
+        const yearTabsContainer = document.getElementById("year-tabs");
+        const raceDashboard = document.getElementById("race-dashboard");
+        // 新增：年份選單的外框 (控制箭頭顯示用)
+        const yearTabsWrapper = document.querySelector(".year-tabs-wrapper");
+
+        // 狀態變數
+        let currentYear = null;
+        let selectedTrackName = null;
+        
+        // ★ 資料緩存 (用於前端即時搜尋)
+        let allScoreData = []; // 存積分榜完整資料
+        let allTracksData = []; // 存所有賽道資料
+
+        // 切換模式
+        document.getElementById("card-score").addEventListener("click", () => switchMode('score'));
+        document.getElementById("card-track").addEventListener("click", () => switchMode('track'));
+
+        function switchMode(mode) {
+            // 1. 先「全部隱藏」，防止殘留
+            scoreSection.style.display = "none";
+            trackSection.style.display = "none";
+            
+            // 2. 判斷要開哪一個
+            if (mode === 'score') {
+                // --- 顯示：積分榜 ---
+                scoreSection.style.display = "block";
+                
+                // 顯示年份箭頭
+                if(yearTabsWrapper) yearTabsWrapper.style.display = "flex";
+
+                // ★ 關鍵修復：切換回來時，要檢查是否應該顯示儀表板
+                // 如果目前選的不是「生涯總計(all)」，且已經有選年份，就要把儀表板開回來
+                if (currentYear && currentYear !== 'all') {
+                    raceDashboard.style.display = "flex";
+                } else {
+                    // 如果還沒初始化，這行沒影響；如果是 all，則保持隱藏
+                    raceDashboard.style.display = "none"; 
+                }
+
+                if (!currentYear) initYearTabs();
+
+            } else {
+                // --- 顯示：賽道紀錄 ---
+                trackSection.style.display = "block";
+                
+                // 隱藏年份箭頭
+                if(yearTabsWrapper) yearTabsWrapper.style.display = "none";
+                
+                // 隱藏儀表板 (賽道榜不需要)
+                raceDashboard.style.display = "none";
+
+                // ★ 關鍵修復：強制回到「賽道列表」，防止卡在「賽道詳情頁」
+                document.getElementById("track-list-view").style.display = "block";
+                document.getElementById("track-detail-view").style.display = "none";
+
+                loadTrackList(); 
+                initFilterYearOptions();
+            }
+        }
+
+    // ==========================================
+        // 1. 積分排行榜邏輯 (年份排序 + 箭頭滑動)
+        // ==========================================
+        // 用來暫存全域賽事資料
+        let cachedGlobalNextRace = null;
+
+        function initYearTabs() {
+            // 平行執行：抓年份 + 抓全域賽事
+            Promise.all([
+                apiGetYears(),
+                apiGetGlobalNextRace()
+            ]).then(([years, nextRaceData]) => {
+                
+                // ★ 把抓到的資料存起來！
+                cachedGlobalNextRace = nextRaceData;
+
+                yearTabsContainer.innerHTML = "";
+                
+                if(Array.isArray(years)) {
+                    years.sort((a, b) => a - b);
+                    years.push("all"); 
+                } else {
+                    years = [2024, "all"]; 
+                }
+
+                // 決定預設選中哪一年
+                // 優先鎖定「全域賽事」的年份
+                let targetYear = 2024;
+                if (years.length >= 2) targetYear = years[years.length - 2]; 
+
+                if (nextRaceData && nextRaceData.status === "Pending") {
+                    const pendingYear = nextRaceData.seasonYear || nextRaceData.SeasonYear;
+                    if (years.includes(pendingYear)) {
+                        targetYear = pendingYear;
+                    }
+                }
+                
+                if (!currentYear) currentYear = targetYear;
+
+                // 渲染 Tab
+                years.forEach(y => {
+                    const div = document.createElement("div");
+                    div.className = "year-tab";
+                    div.innerText = (y === 'all') ? "生涯總計" : y;
+                    
+                    if (y == currentYear) div.classList.add("active");
+                    
+                    div.addEventListener("click", () => {
+                        document.querySelectorAll(".year-tab").forEach(t => t.classList.remove("active"));
+                        div.classList.add("active");
+                        div.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+                        currentYear = y;
+                        loadScoreLeaderboard(y);
+                        
+                        // ★ 切換年份時，永遠傳入「存起來的全域資料」
+                        loadDashboard(cachedGlobalNextRace); 
+                    });
+                    yearTabsContainer.appendChild(div);
+                });
+                
+                // 綁定箭頭
+                const btnPrev = document.getElementById("tab-prev");
+                const btnNext = document.getElementById("tab-next");
+                if(btnPrev) btnPrev.onclick = () => yearTabsContainer.scrollBy({ left: -150, behavior: 'smooth' });
+                if(btnNext) btnNext.onclick = () => yearTabsContainer.scrollBy({ left: 150, behavior: 'smooth' });
+
+                // 初始載入
+                loadScoreLeaderboard(currentYear);
+                loadDashboard(cachedGlobalNextRace); 
+
+            }).catch(err => {
+                console.warn("Init Error:", err);
+            });
+        }
+
+        // 載入積分榜 (並存入緩存)
+        function loadScoreLeaderboard(year) {
+            const tbody = document.querySelector("#score-table tbody");
+            tbody.innerHTML = `<tr><td colspan="6">載入中...</td></tr>`;
+            
+            apiGetLeaderboardByYear(year).then(data => {
+                allScoreData = data || []; // ★ 存起來
+                renderScoreTable(allScoreData); // 渲染
+            });
+        }
+
+        // 渲染表格 (支援篩選)
+        function renderScoreTable(data) {
+            const tbody = document.querySelector("#score-table tbody");
+            tbody.innerHTML = "";
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6">無資料</td></tr>`;
+                return;
+            }
+            data.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${row.rank}</td>
+                    <td style="color:#0071e3; cursor:pointer; font-weight:500;" onclick="openPlayerModal('${row.username}')">${row.username}</td>
+                    <td>${row.winCount}</td>
+                    <td>${row.podiumCount}</td>
+                    <td>${row.raceCount}</td>
+                    <td>${row.score}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ★ 即時搜尋：積分榜
+        document.getElementById("score-search-input").addEventListener("input", (e) => {
+            const keyword = e.target.value.toLowerCase();
+            // 只保留符合關鍵字的人 (過濾)
+            const filtered = allScoreData.filter(d => d.username.toLowerCase().includes(keyword));
+            renderScoreTable(filtered);
+        });
+
+       // ==========================================
+        // 2. 儀表板與模擬邏輯 (新增賽季顯示 + 日期簡化)
+        // ==========================================
+        // ==========================================
+        // 2. 儀表板邏輯 (純顯示模式 + Final去背)
+        // ==========================================
+        function loadDashboard(data) {
+            const dashboard = document.getElementById("race-dashboard");
+            
+            // ★ 修改：永遠顯示儀表板 (即使是生涯模式)
+            dashboard.style.display = "flex"; 
+
+            const elBadge = document.getElementById("dash-badge");
+            const elTitle = document.getElementById("dash-track-name");
+            const elMeta = document.getElementById("dash-meta");
+            const elImg = document.getElementById("dash-img");
+            const btn = document.getElementById("dash-btn");
+            const msg = document.getElementById("dash-msg");
+            
+            msg.innerText = "";
+
+            // ★ 步驟 1：先移除 Final 特殊樣式 (恢復預設有框)
+            elImg.classList.remove("dash-img-final");
+            
+            // 如果還沒拿到資料，顯示 Loading
+            if(!data) {
+                elTitle.innerText = "載入中...";
+                btn.disabled = true;
+                btn.innerText = "讀取中...";
+                elImg.src = ""; 
+                return;
+            }
+
+            // --- 開始渲染 ---
+            btn.disabled = false;
+            const status = data.status || data.Status;
+            
+            if (status === "Finished") {
+                // ★ 步驟 2：如果是 Finished，加上去背樣式
+                elImg.classList.add("dash-img-final");
+
+                elBadge.className = "dash-badge";
+                elBadge.innerText = "SEASON FINISHED";
+                elMeta.innerText = `NEXT ${data.nextSeasonYear || data.NextSeasonYear}`;
+                elImg.src = "images/trophy-default.png"; 
+                
+                btn.innerText = "New Season";
+                btn.onclick = () => alert(`請聯繫管理員更新賽程。`);
+
+            } else if (status === "Pending") {
+                // ★ 步驟 3：如果是 Pending，確保移除樣式
+                elImg.classList.remove("dash-img-final");
+
+                const trackName = data.trackName || data.TrackName || "--";
+                const round = data.round || data.Round;
+                const totalRounds = data.totalRounds || data.TotalRounds;
+                const trackUrl = data.trackUrl || data.TrackUrl || 'img/track-default.jpg';
+                const isFinal = data.isFinal || data.IsFinal;
+                const raceYear = data.seasonYear || data.SeasonYear; 
+                
+                // 日期格式化
+                let dateStr = "待定";
+                const rawDate = data.raceDate || data.RaceDate;
+                if (rawDate) {
+                    const d = new Date(rawDate);
+                    if(!isNaN(d.getTime())) {
+                        dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+                    } else {
+                        const parts = rawDate.split('-');
+                        if(parts.length >= 3) dateStr = `${parseInt(parts[1])}/${parseInt(parts[2])}`;
+                    }
+                }
+
+                elTitle.innerText = trackName;
+                elMeta.innerHTML = `
+                    <span style="color:#0071e3; font-weight:bold;">${raceYear}</span> &nbsp;•&nbsp; 
+                    Round ${round} &nbsp;•&nbsp; 
+                    ${dateStr}
+                `;
+                elImg.src = trackUrl;
+                
+                if (isFinal) {
+                    elBadge.innerText = "FINAL RACE";
+                    elBadge.className = "dash-badge final";
+                } else {
+                    elBadge.innerText = "NEXT RACE";
+                    elBadge.className = "dash-badge";
+                }
+
+                btn.innerText = "Simulate";
+                btn.onclick = () => {
+                    if(!confirm(`確定要開始模擬 ${trackName} 的比賽嗎？`)) return;
+                    btn.disabled = true;
+                    btn.innerText = "比賽進行中...";
+                    
+                    // 模擬該年份的比賽
+                    apiSimulateRace(raceYear).then(res => {
+                        if(res.ok) {
+                            msg.innerText = "比賽完成！排行榜已更新。";
+                            // ★ 模擬完畢後，重新跑一次初始化，抓取新的下一場
+                            initYearTabs(); 
+                        } else {
+                            const errMsg = (res.data && (res.data.message || res.data.Message)) || "未知錯誤";
+                            alert("模擬失敗: " + errMsg);
+                            btn.disabled = false;
+                            btn.innerText = "Simulate";
+                        }
+                    });
+                };
+            } else {
+                elBadge.innerText = "ERROR";
+                elTitle.innerText = "狀態異常";
+                btn.disabled = true;
+            }
+        }
+
+        // ==========================================
+        // 2. 賽道紀錄邏輯
+        // ==========================================
+        
+        const trackListView = document.getElementById("track-list-view");
+        const trackDetailView = document.getElementById("track-detail-view");
+        const trackGrid = document.getElementById("track-grid-container");
+
+        // 載入賽道列表 (存入緩存)
+        function loadTrackList() {
+            trackListView.style.display = "block";
+            trackDetailView.style.display = "none";
+            trackGrid.innerHTML = "載入中...";
+
+            apiGetTracks().then(tracks => {
+                allTracksData = tracks || []; // ★ 存起來
+                renderTrackGrid(allTracksData);
+            });
+        }
+
+        // 渲染 Grid
+        function renderTrackGrid(tracks) {
+            trackGrid.innerHTML = "";
+            if(tracks.length === 0) {
+                trackGrid.innerHTML = "<p>無賽道資料</p>";
+                return;
+            }
+
+            tracks.forEach(track => {
+                const card = document.createElement("div");
+                card.className = "track-card";
+                card.onclick = () => openTrackDetail(track);
+                
+                const imgSrc = track.imageUrl || 'img/track-default.jpg'; 
+                card.innerHTML = `
+                    <img src="${imgSrc}" class="track-card-img" onerror="this.src='img/track-default.jpg'">
+                    <div class="track-card-body">
+                        <h3 class="track-card-title">${track.name}</h3>
+                        <div style="font-size:13px; color:#666;">${track.length || '?'} KM</div>
+                    </div>
+                `;
+                trackGrid.appendChild(card);
+            });
+        }
+
+        // ★ 即時搜尋：賽道列表
+        document.getElementById("track-list-search").addEventListener("input", (e) => {
+            const val = e.target.value.toLowerCase();
+            const filtered = allTracksData.filter(t => t.name.toLowerCase().includes(val));
+            renderTrackGrid(filtered);
+        });
+
+        // 進入詳情
+        function openTrackDetail(track) {
+            selectedTrackName = track.name;
+            trackListView.style.display = "none";
+            trackDetailView.style.display = "block";
+            
+            document.getElementById("detail-track-name").innerText = track.name;
+            document.getElementById("detail-track-length").innerText = (track.length || '?') + "KM";
+            document.getElementById("detail-track-img").src = track.imageUrl || 'img/track-default.jpg';
+            
+            // 重置輸入框
+            document.getElementById("filter-year").value = "all";
+            document.getElementById("filter-player").value = "";
+            document.getElementById("filter-car").value = "";
+
+            loadTrackTable();
+        }
+
+        // 載入紀錄表格 (即時查詢)
+        function loadTrackTable() {
+            if (!selectedTrackName) return;
+            const tbody = document.querySelector("#track-table tbody");
+            
+            // 由於即時搜尋頻率高，這裡可以考慮 Debounce，但如果資料量不大直接呼叫也行
+            // 這裡示範直接呼叫 API
+            const yearVal = document.getElementById("filter-year").value;
+            const playerVal = document.getElementById("filter-player").value.trim();
+            const carVal = document.getElementById("filter-car").value.trim();
+
+            apiGetTrackLeaderboard(selectedTrackName, yearVal, playerVal, carVal).then(data => {
+                tbody.innerHTML = "";
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5">查無符合條件的紀錄</td></tr>`;
+                    return;
+                }
+                data.forEach(row => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${row.rank}</td>
+                        <td style="color:#0071e3; cursor:pointer; font-weight:500;" onclick="openPlayerModal('${row.username}')">${row.username}</td>
+                        <td>${row.carName || '-'}</td>
+                        <td style="font-family:monospace; font-weight:bold;">${row.bestTime}</td>
+                        <td>${row.date || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        // ★ 即時搜尋：賽道紀錄的三個篩選器
+        // 綁定事件：只要輸入變動，就重新撈取資料
+        const filters = ["filter-year", "filter-player", "filter-car"];
+        filters.forEach(id => {
+            document.getElementById(id).addEventListener("input", () => loadTrackTable());
+        });
+
+        // 初始化年份
+        function initFilterYearOptions() {
+            const sel = document.getElementById("filter-year");
+            apiGetYears().then(years => {
+                sel.innerHTML = `<option value="all">All Time</option>`;
+                years.forEach(y => {
+                    const opt = document.createElement("option");
+                    opt.value = y;
+                    opt.innerText = y;
+                    sel.appendChild(opt);
+                });
+            });
+        }
+        
+        document.getElementById("back-to-tracks").addEventListener("click", loadTrackList);
+
+        // 玩家彈窗保持不變
+        function openPlayerModal(username) {
+            const modal = document.getElementById("player-modal");
+            const overlay = document.getElementById("player-modal-overlay");
+            const content = document.getElementById("player-modal-content");
+            content.innerHTML = '<div style="text-align:center; padding:30px; color:#888;">資料讀取中...</div>';
+            modal.classList.add("show");
+            overlay.classList.add("show");
+            
+            apiGetPlayerDetail(username).then(data => {
+                if (!data) { content.innerHTML = "找不到資料"; return; }
+                const gold = data.winCount || 0;
+                let html = `
+                    <div style="background:#fff; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05); margin-bottom:24px;">
+                        <h2 style="margin:0 0 20px 0;">帳號：${data.username}</h2>
+                        <div style="display:flex; justify-content:space-between;">
+                            <div><div style="font-size:13px; color:#888;">生涯總分</div><div style="font-size:28px; font-weight:700;">${data.totalScore.toLocaleString()}</div></div>
+                            <div><div style="font-size:13px; color:#888;">參賽次數</div><div style="font-size:28px; font-weight:700;">${data.raceCount}</div></div>
+                        </div>
+                    </div>
+                    <h3>最近賽事</h3>
+                    <table class="small-table"><thead><tr><th>日期</th><th>賽道</th><th>成績</th></tr></thead><tbody>`;
+                if(data.recentRecords) {
+                    data.recentRecords.forEach(r => {
+                        html += `<tr><td>${r.date}</td><td>${r.trackName}</td><td>${r.bestTime}</td></tr>`;
+                    });
+                }
+                html += `</tbody></table>`;
+                content.innerHTML = html;
+            });
+        }
+        document.getElementById("player-modal-close").addEventListener("click", () => {
+            document.getElementById("player-modal").classList.remove("show");
+            document.getElementById("player-modal-overlay").classList.remove("show");
+        });
+        document.getElementById("player-modal-overlay").addEventListener("click", () => {
+            document.getElementById("player-modal").classList.remove("show");
+            document.getElementById("player-modal-overlay").classList.remove("show");
+        });
+
+    </script>
+</body>
+</html>
