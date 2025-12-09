@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>SHOP</title>
-    <link rel="stylesheet" href="style.css">
+    <script type="text/javascript" nonce="9cadada23c7b411196f2901f590" src="//local.adguard.org?ts=1765315175832&amp;type=content-script&amp;dmn=cdn.discordapp.com&amp;url=https%3A%2F%2Fcdn.discordapp.com%2Fattachments%2F1446522557434953869%2F1448054928676491465%2Ftrade-2.html%3Fex%3D6939ddbe%26is%3D69388c3e%26hm%3De459ddf5ef954cb4f2ef0a9a90df4df1ed57527427e4316913bca0eb25bd86ad%26&amp;app=msedge.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0&amp;stealth=1&amp;st-dnt"></script><script type="text/javascript" nonce="9cadada23c7b411196f2901f590" src="//local.adguard.org?ts=1765315175832&amp;name=AdGuard%20Extra&amp;name=AdGuard%20Popup%20Blocker&amp;name=Web%20of%20Trust&amp;type=user-script"></script><link rel="stylesheet" href="style.css">
     <script src="api.js"></script>
     <style>
         .filter-bar {
@@ -146,7 +146,6 @@
 
         <div id="global-filter-bar" class="filter-bar" style="display:none; margin-top: 20px;">
             <div class="filter-group" id="filter-group-country">
-                <label>國家</label>
                 <select id="filter-country" class="filter-select">
                     <option value="All">全部</option>
                 </select>
@@ -424,31 +423,52 @@
                         dealerSection.classList.remove("search-active");
                     }
 
+                    // 1. 先篩選出符合條件的所有車輛 (包含國家、年份、價格)
                     const filteredCars = allDealerCars.filter(c => {
-                        const matchCountry = country === "All" || (c.countryName && c.countryName === country);
+                        // 防呆：確保欄位存在
+                        const carCountry = (c.countryName || "").toLowerCase();
+                        const filterCountryVal = country.toLowerCase();
+                        
+                        const matchCountry = country === "All" || carCountry === filterCountryVal;
                         const matchYear = (c.model_year || 0) >= yMin && (c.model_year || 0) <= yMax;
                         const matchPrice = c.base_price >= pMin && c.base_price <= pMax;
 
                         if (currentSelectedBrand) {
+                            // 【情境 A】已經點進某品牌內頁
                             if (c.brand !== currentSelectedBrand) return false;
+                            
                             const matchKeyword = !keyword || c.model_name.toLowerCase().includes(keyword);
-                            return matchKeyword && matchYear && matchPrice;
+                            
+                            // ★ 修正 1：這裡原本漏了 matchCountry，現在補上！
+                            return matchKeyword && matchCountry && matchYear && matchPrice;
                         } else {
-                            const matchKeyword = !keyword || c.model_name.toLowerCase().includes(keyword) || c.brand.toLowerCase().includes(keyword);
+                            // 【情境 B】在外層品牌列表
+                            const matchKeyword = !keyword || 
+                                                 c.model_name.toLowerCase().includes(keyword) || 
+                                                 c.brand.toLowerCase().includes(keyword);
+                            
                             return matchKeyword && matchCountry && matchYear && matchPrice;
                         }
                     });
+
+                    // 2. 渲染車款表格 (內頁用)
                     renderDealerTable(filteredCars);
 
+                    // 3. 渲染品牌卡片 (外層用)
+                    // ★ 修正 2：外層的品牌卡片，應該只顯示「篩選後還有車」的品牌
                     if (viewBrandList.style.display !== "none") {
-                        let filteredBrands = allBrandsData;
-                        if (keyword) {
-                            filteredBrands = allBrandsData.filter(b => b.name.toLowerCase().includes(keyword));
-                        }
+                        
+                        // 找出所有符合篩選條件的車輛所屬的品牌
+                        const availableBrands = new Set(filteredCars.map(c => c.brand));
+                        
+                        // 只顯示這些品牌
+                        const filteredBrands = allBrandsData.filter(b => availableBrands.has(b.name));
+                        
                         renderBrandCards(filteredBrands);
                     }
 
                 } else if (currentMode === "used") {
+                    // 二手車邏輯保持不變 (原本就是好的)
                     const keyword = usedSearch.value.toLowerCase().trim();
                     const myId = Number(playerId);
 
@@ -456,9 +476,13 @@
                         if (Number(c.seller_id) === myId) return false;
 
                         const matchKeyword = !keyword || c.model_name.toLowerCase().includes(keyword) || c.brand_name.toLowerCase().includes(keyword) || c.seller_name.toLowerCase().includes(keyword);
-                        const matchCountry = country === "All" || (c.countryName && c.countryName === country);
+                        const carCountry = (c.countryName || "").toLowerCase();
+                        const filterCountryVal = country.toLowerCase();
+                        const matchCountry = country === "All" || carCountry === filterCountryVal;
+                        
                         const matchYear = (c.model_year || 0) >= yMin && (c.model_year || 0) <= yMax;
                         const matchPrice = c.sale_price >= pMin && c.sale_price <= pMax;
+                        
                         return matchKeyword && matchCountry && matchYear && matchPrice;
                     });
                     renderUsedTable(filteredUsed);
