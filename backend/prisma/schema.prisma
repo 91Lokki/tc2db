@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountStatus {
+  ACTIVE
+  DELETED
+}
+
+enum TransactionType {
+  DEALER_PURCHASE
+  USED_PURCHASE
+  USED_SALE
+  LISTING_CREATED
+  LISTING_CANCELLED
+  RACE_PRIZE
+  ACCOUNT_CLOSURE
+  ADMIN_ADJUSTMENT
+}
+
+enum RaceStatus {
+  PENDING
+  COMPLETED
+}
+
+model Country {
+  id      Int     @id @default(autoincrement())
+  name    String  @unique
+  code    String  @unique
+  flagUrl String?
+  brands  Brand[]
+}
+
+model Brand {
+  id         Int        @id @default(autoincrement())
+  name       String     @unique
+  logoUrl    String?
+  countryId  Int
+  country    Country    @relation(fields: [countryId], references: [id])
+  carModels  CarModel[]
+}
+
+model CarModel {
+  id            Int        @id @default(autoincrement())
+  name          String
+  modelYear     Int
+  basePrice     Int
+  stockQuantity Int        @default(0)
+  power         Int
+  topSpeed      Int
+  carUrl        String?
+  brandId       Int
+  brand         Brand      @relation(fields: [brandId], references: [id])
+  ownedCars     OwnedCar[]
+
+  @@unique([brandId, name, modelYear])
+}
+
+model Player {
+  id             Int                @id @default(autoincrement())
+  username       String             @unique
+  passwordHash   String
+  money          Int                @default(0)
+  isAdmin        Boolean            @default(false)
+  regDate        DateTime           @default(now())
+  accountStatus  AccountStatus      @default(ACTIVE)
+  deletedAt      DateTime?
+  ownedCars      OwnedCar[]
+  transactions   MoneyTransaction[]
+  seasonPoints   SeasonPoints[]
+  raceResults    RaceResult[]
+}
+
+model OwnedCar {
+  id          Int         @id @default(autoincrement())
+  playerId    Int
+  modelId     Int
+  mileage     Int         @default(0)
+  onSale      Boolean     @default(false)
+  salePrice   Int?
+  obtainDate  DateTime    @default(now())
+  listingDate DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  player      Player      @relation(fields: [playerId], references: [id])
+  model       CarModel    @relation(fields: [modelId], references: [id])
+  raceResults RaceResult[]
+
+  @@index([playerId, onSale])
+  @@index([onSale])
+}
+
+model MoneyTransaction {
+  id               Int             @id @default(autoincrement())
+  playerId         Int
+  type             TransactionType
+  amount           Int
+  description      String
+  counterpartyName String?
+  transTime        DateTime        @default(now())
+  player           Player          @relation(fields: [playerId], references: [id])
+
+  @@index([playerId, transTime])
+}
+
+model Track {
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  length      Float
+  imageUrl    String?
+  raceSchedule RaceSchedule[]
+}
+
+model RaceSchedule {
+  id           Int         @id @default(autoincrement())
+  seasonYear   Int
+  roundNumber  Int
+  trackId      Int
+  raceDate     DateTime
+  status       RaceStatus  @default(PENDING)
+  completedAt  DateTime?
+  top1PlayerId Int?
+  top1Name     String?
+  top2PlayerId Int?
+  top2Name     String?
+  top3PlayerId Int?
+  top3Name     String?
+  track        Track       @relation(fields: [trackId], references: [id])
+  raceResults  RaceResult[]
+
+  @@unique([seasonYear, roundNumber])
+  @@index([seasonYear, status, roundNumber])
+}
+
+model RaceResult {
+  id            Int          @id @default(autoincrement())
+  raceScheduleId Int
+  playerId      Int
+  ownedCarId    Int
+  finishRank    Int
+  finishTimeMs  Int
+  pointsAwarded Int          @default(0)
+  prizeMoney    Int          @default(0)
+  createdAt     DateTime     @default(now())
+  raceSchedule  RaceSchedule @relation(fields: [raceScheduleId], references: [id])
+  player        Player       @relation(fields: [playerId], references: [id])
+  ownedCar      OwnedCar     @relation(fields: [ownedCarId], references: [id])
+
+  @@unique([raceScheduleId, playerId])
+  @@unique([raceScheduleId, finishRank])
+  @@index([playerId, finishRank])
+}
+
+model SeasonPoints {
+  id          Int      @id @default(autoincrement())
+  seasonYear  Int
+  playerId    Int
+  totalPoints Int      @default(0)
+  winCount    Int      @default(0)
+  podiumCount Int      @default(0)
+  raceCount   Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  player      Player   @relation(fields: [playerId], references: [id])
+
+  @@unique([seasonYear, playerId])
+  @@index([seasonYear, totalPoints])
+}

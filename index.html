@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <title>LOGIN</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="api.js"></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <nav class="header-nav">
+                    <a href="home.html" class="nav-link nav-link-active">HOME</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+    <div class="app login-page">
+        <h2>LOGIN</h2>
+        <label>
+            <input type="text" id="login-username" placeholder="Account">
+        </label><br>
+        <label>
+            <input type="password" id="login-password" placeholder="Password">
+        </label><br>
+        <button id="login-btn">login</button>
+        <p id="login-msg"></p>
+
+        <hr>
+
+        <p>
+            Don't have a account?
+            <button id="go-register">Create new account</button>
+        </p>
+    </div>
+
+    <script>
+        const loginBtn = document.getElementById("login-btn");
+        const goRegBtn = document.getElementById("go-register");
+
+        loginBtn.addEventListener("click", () => {
+            const u = document.getElementById("login-username").value;
+            const p = document.getElementById("login-password").value;
+
+            apiLogin(u, p).then(user => {
+                if (user) {
+                    // ★ 修正：這裡改成讀取 player_id (對應新的 api.js)
+                    localStorage.setItem("playerId", user.player_id);
+                    localStorage.setItem("username", user.username);
+                    localStorage.setItem("isAdmin", String(Boolean(user.is_admin)));
+                    window.location.href = "home.html";
+                } else {
+                    document.getElementById("login-msg").innerText = "帳號或密碼錯誤，或尚未註冊";
+                }
+            });
+        });
+
+        goRegBtn.addEventListener("click", () => {
+            window.location.href = "register.html";
+        });
+    </script>
+</body>
+
+</html>

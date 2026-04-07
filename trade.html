@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <title>SHOP</title>
+    <script type="text/javascript" nonce="9cadada23c7b411196f2901f590" src="//local.adguard.org?ts=1765315175832&amp;type=content-script&amp;dmn=cdn.discordapp.com&amp;url=https%3A%2F%2Fcdn.discordapp.com%2Fattachments%2F1446522557434953869%2F1448054928676491465%2Ftrade-2.html%3Fex%3D6939ddbe%26is%3D69388c3e%26hm%3De459ddf5ef954cb4f2ef0a9a90df4df1ed57527427e4316913bca0eb25bd86ad%26&amp;app=msedge.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0&amp;stealth=1&amp;st-dnt"></script><script type="text/javascript" nonce="9cadada23c7b411196f2901f590" src="//local.adguard.org?ts=1765315175832&amp;name=AdGuard%20Extra&amp;name=AdGuard%20Popup%20Blocker&amp;name=Web%20of%20Trust&amp;type=user-script"></script><link rel="stylesheet" href="style.css">
+    <script src="api.js"></script>
+    <style>
+        .filter-bar {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-size: 13px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .filter-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            width: 100px;
+            font-size: 14px;
+        }
+
+        .filter-select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            min-width: 120px;
+        }
+
+        .search-active #view-brand-list,
+        .search-active #view-car-list {
+            display: block !important;
+        }
+
+        .search-active #btn-back-brand {
+            display: none !important;
+        }
+
+        .brand-card-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            height: 100%;
+            padding: 15px 0;
+        }
+
+        .brand-card-logo {
+            height: 150px;
+            width: 150px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .brand-card-name {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        /* ▼▼▼ 修正：標題用的國旗圖示 (車商內頁) ▼▼▼ */
+        .header-country-flag {
+            height: 24px;
+            /* 標題字比較大，旗子稍微大一點點 */
+            width: auto;
+            object-fit: contain;
+            margin-left: 8px;
+            /* 靠左留白 */
+            vertical-align: middle;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ▼▼▼ 修正：表格內的國旗圖示 (二手車列表) ▼▼▼ */
+        .flag-icon {
+            height: 14px;
+            /* 跟文字 (14px) 一樣高 */
+            width: auto;
+            /* 寬度自動 */
+            object-fit: contain;
+            margin-left: 6px;
+            /* 放在文字右邊，左邊留點空隙 */
+            vertical-align: middle;
+            /* 垂直置中對齊 */
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <nav class="header-nav">
+                    <a href="home.html" class="nav-link">HOME</a>
+                    <a href="leaderboard.html" class="nav-link">LEADERBOARD</a>
+                    <a href="trade.html" class="nav-link nav-link-active">SHOP</a>
+                    <a href="schedule.html" class="nav-link">SCHEDULE</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div class="profile-icon" id="nav-profile-icon"></div>
+            </div>
+        </div>
+    </header>
+    <div class="app">
+        <div class="top-bar">
+            <h1>SHOP</h1>
+            <div class="top-bar-right">
+                <span id="money-display" class="money-display">💰--</span>
+            </div>
+        </div>
+
+        <div class="card-container">
+            <div class="card" id="card-dealer">
+                <h2>Dealership</h2>
+                <p>Brand-new models from manufacturers</p>
+            </div>
+
+            <div class="card" id="card-used">
+                <h2>Used Cars</h2>
+                <p>Pre-owned cars listed by players</p>
+            </div>
+        </div>
+
+        <div id="global-filter-bar" class="filter-bar" style="display:none; margin-top: 20px;">
+            <div class="filter-group" id="filter-group-country">
+                <select id="filter-country" class="filter-select">
+                    <option value="All">全部</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>年份</label>
+                <input type="number" id="filter-year-min" class="filter-input" placeholder="最低">
+                <span>-</span>
+                <input type="number" id="filter-year-max" class="filter-input" placeholder="最高">
+            </div>
+            <div class="filter-group">
+                <label>價格</label>
+                <input type="number" id="filter-price-min" class="filter-input" placeholder="最低">
+                <span>-</span>
+                <input type="number" id="filter-price-max" class="filter-input" placeholder="最高">
+            </div>
+            <div style="flex:1; display:flex; justify-content:flex-end;">
+                <button id="btn-reset-filter"
+                    style="background:#eee; color:#333; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">重置條件</button>
+            </div>
+        </div>
+
+        <section id="dealer-section" style="display:none;">
+            <div class="search-bar-container" style="margin-bottom: 20px;">
+                <input type="text" id="dealer-search" placeholder="搜尋品牌或車款..."
+                    style="width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ddd; border-radius: 8px; outline: none;">
+            </div>
+
+            <div id="view-brand-list">
+                <div class="card-container" id="brand-container"></div>
+            </div>
+
+            <div id="view-car-list" style="display:none;">
+                <div style="margin-top:20px; margin-bottom:15px; display:flex; align-items:center;">
+                    <button id="btn-back-brand"
+                        style="background:#f2f2f7; color:#333; border:none; padding:8px 16px; border-radius:20px; font-weight:bold; cursor:pointer; margin-right: 15px;">←
+                        返回品牌列表</button>
+
+                    <h3 id="dealer-brief" style="margin:0; display: flex; align-items: center;">車款列表</h3>
+                </div>
+                <table id="dealer-table">
+                    <thead>
+                        <tr>
+                            <th style="width:15%">車輛</th>
+                            <th style="width:25%">車款</th>
+                            <th style="width:10%">年份</th>
+                            <th style="width:10%">馬力</th>
+                            <th style="width:10%">極速</th>
+                            <th style="width:15%">價格</th>
+                            <th style="width:15%">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="used-section" style="display:none;">
+            <div class="search-bar-container" style="margin-bottom: 20px;">
+                <input type="text" id="used-search" placeholder="搜尋賣家,車款或品牌..."
+                    style="width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ddd; border-radius: 8px; outline: none;">
+            </div>
+
+            <table id="used-table">
+                <thead>
+                    <tr>
+                        <th style="width:15%">賣家</th>
+                        <th style="width:25%">車款</th>
+                        <th style="width:10%">年份</th>
+                        <th style="width:15%">品牌</th>
+                        <th style="width:10%">里程數</th>
+                        <th style="width:10%">價格</th>
+                        <th style="width:15%">上架時間</th>
+                        <th style="width:10%">操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <p id="trade-msg"></p>
+
+        <div id="buy-modal-overlay" class="modal-overlay"></div>
+        <div id="buy-modal" class="modal" style="max-width: 480px; padding: 24px;">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 20px;">
+                <h3 style="font-size: 20px; font-weight: 700;">確認購買車輛</h3>
+                <button id="modal-close-x" class="modal-close"
+                    style="font-size: 24px; color: #8e8e93; margin-top: -4px;">×</button>
+            </div>
+            <div class="modal-content" style="text-align: center;">
+                <div
+                    style="margin-bottom: 24px; padding: 10px; background: #fff; border-radius: 16px; box-shadow: 0 12px 24px rgba(0,0,0,0.08);">
+                    <img id="modal-car-img" src=""
+                        style="width: 100%; height: auto; object-fit: contain; border-radius: 12px;">
+                </div>
+                <h2 id="modal-car-name" style="margin: 0 0 24px 0; font-size: 26px; font-weight: 700; color: #1d1d1f;">
+                    --</h2>
+                <div style="background: #f5f5f7; border-radius: 14px; padding: 16px; margin-bottom: 30px;">
+                    <table class="small-table" style="margin: 0; border: none; background: transparent;">
+                        <thead>
+                            <tr style="background: transparent;">
+                                <th style="width:33%; border: none; color: #8e8e93;">YEAR</th>
+                                <th style="width:33%; border: none; color: #8e8e93;">POWER</th>
+                                <th style="width:33%; border: none; color: #8e8e93;">TOP SPEED</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: transparent;">
+                                <td id="modal-car-year" style="border: none; font-size: 17px; font-weight: 600;">--</td>
+                                <td id="modal-car-power" style="border: none; font-size: 17px; font-weight: 600;">--
+                                </td>
+                                <td id="modal-car-speed" style="border: none; font-size: 17px; font-weight: 600;">--
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.05);">
+                        <div style="font-size: 13px; color: #8e8e93; margin-bottom: 4px;">價格</div>
+                        <div id="modal-car-price" style="font-size: 28px; font-weight: 800; color: #34c759;">--</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button id="btn-cancel-buy"
+                        style="flex: 1; background: #f2f2f7; color: #1d1d1f; border: none; padding: 14px; border-radius: 999px; font-size: 17px; font-weight: 600;">取消</button>
+                    <button id="btn-confirm-buy"
+                        style="flex: 1.5; background: #1d1d1f; color: white; border: none; padding: 14px; border-radius: 999px; font-size: 17px; font-weight: 600;">確認購買</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const navIcon = document.getElementById("nav-profile-icon");
+        if (navIcon) {
+            const username = localStorage.getItem("username") || "你";
+            navIcon.textContent = username.charAt(0).toUpperCase();
+            navIcon.addEventListener("click", () => { window.location.href = "profile.html"; });
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const playerId = localStorage.getItem("playerId");
+            if (!playerId) { window.location.href = "index.html"; }
+
+            // UI 元素
+            const dealerCard = document.getElementById("card-dealer");
+            const usedCard = document.getElementById("card-used");
+            const dealerSection = document.getElementById("dealer-section");
+            const usedSection = document.getElementById("used-section");
+            const tradeMsg = document.getElementById("trade-msg");
+            const globalFilterBar = document.getElementById("global-filter-bar");
+            const filterCountryGroup = document.getElementById("filter-group-country");
+
+            const viewBrandList = document.getElementById("view-brand-list");
+            const viewCarList = document.getElementById("view-car-list");
+            const btnBackBrand = document.getElementById("btn-back-brand");
+
+            const filterCountry = document.getElementById("filter-country");
+            const filterYearMin = document.getElementById("filter-year-min");
+            const filterYearMax = document.getElementById("filter-year-max");
+            const filterPriceMin = document.getElementById("filter-price-min");
+            const filterPriceMax = document.getElementById("filter-price-max");
+            const btnResetFilter = document.getElementById("btn-reset-filter");
+            const dealerSearch = document.getElementById("dealer-search");
+            const usedSearch = document.getElementById("used-search");
+
+            const filterInputs = [filterCountry, filterYearMin, filterYearMax, filterPriceMin, filterPriceMax];
+
+            let allBrandsData = [];
+            let allDealerCars = [];
+            let allUsedCars = [];
+            let currentMode = "";
+            let isDealerLoaded = false;
+            let currentSelectedBrand = null;
+
+            try {
+                if (typeof apiGetProfile === 'function') {
+                    apiGetProfile(playerId).then(user => {
+                        if (user && typeof user.money === "number") {
+                            const el = document.getElementById("money-display");
+                            if (el) el.innerText = `💰${user.money}`;
+                        }
+                    });
+                }
+
+                if (typeof apiGetCountries === 'function') {
+                    apiGetCountries().then(countries => {
+                        if (filterCountry && Array.isArray(countries)) {
+                            filterCountry.innerHTML = `<option value="All">所有國家</option>`;
+                            countries.forEach(c => filterCountry.innerHTML += `<option value="${c}">${c}</option>`);
+                        }
+                    }).catch(e => console.log("國家載入失敗", e));
+                }
+            } catch (e) { console.warn("API 初始化錯誤", e); }
+
+            dealerCard.addEventListener("click", () => {
+                currentMode = "dealer";
+                dealerSection.style.display = "block";
+                usedSection.style.display = "none";
+                globalFilterBar.style.display = "flex";
+                tradeMsg.innerText = "";
+
+                currentSelectedBrand = null;
+                viewBrandList.style.display = "block";
+                viewCarList.style.display = "none";
+
+                dealerSearch.value = "";
+                dealerSearch.placeholder = "搜尋品牌或車款...";
+                dealerSection.classList.remove("search-active");
+                if (filterCountryGroup) filterCountryGroup.style.display = "flex";
+
+                initDealerData();
+            });
+
+            usedCard.addEventListener("click", () => {
+                currentMode = "used";
+                usedSection.style.display = "block";
+                dealerSection.style.display = "none";
+                globalFilterBar.style.display = "flex";
+                tradeMsg.innerText = "";
+
+                if (filterCountryGroup) filterCountryGroup.style.display = "flex";
+                loadUsedCars();
+            });
+
+            filterInputs.forEach(input => {
+                if (input) input.addEventListener("input", applyFilters);
+            });
+            if (dealerSearch) dealerSearch.addEventListener("input", applyFilters);
+            if (usedSearch) usedSearch.addEventListener("input", applyFilters);
+
+            if (btnResetFilter) {
+                btnResetFilter.addEventListener("click", () => {
+                    filterInputs.forEach(i => {
+                        if (i) i.value = (i.tagName === "SELECT" ? "All" : "");
+                    });
+                    if (dealerSearch) dealerSearch.value = "";
+                    if (usedSearch) usedSearch.value = "";
+                    if (dealerSection) dealerSection.classList.remove("search-active");
+
+                    if (currentMode === "dealer" && !currentSelectedBrand) {
+                        viewBrandList.style.display = "block";
+                        viewCarList.style.display = "none";
+                        renderBrandCards(allBrandsData);
+                    }
+                    applyFilters();
+                });
+            }
+
+            if (btnBackBrand) {
+                btnBackBrand.addEventListener("click", () => {
+                    currentSelectedBrand = null;
+                    viewBrandList.style.display = "block";
+                    viewCarList.style.display = "none";
+                    if (dealerSearch) {
+                        dealerSearch.value = "";
+                        dealerSearch.placeholder = "搜尋品牌或車款...";
+                    }
+                    if (dealerSection) dealerSection.classList.remove("search-active");
+                    if (filterCountryGroup) filterCountryGroup.style.display = "flex";
+                    renderBrandCards(allBrandsData);
+                });
+            }
+
+            function applyFilters() {
+                const country = filterCountry ? filterCountry.value : "All";
+                const yMin = Number(document.getElementById("filter-year-min").value) || 0;
+                const yMax = Number(document.getElementById("filter-year-max").value) || 9999;
+                const pMin = Number(document.getElementById("filter-price-min").value) || 0;
+                const pMax = Number(document.getElementById("filter-price-max").value) || 999999999;
+
+                if (currentMode === "dealer") {
+                    const keyword = dealerSearch.value.toLowerCase().trim();
+                    if (keyword) {
+                        dealerSection.classList.add("search-active");
+                    } else {
+                        dealerSection.classList.remove("search-active");
+                    }
+
+                    // 1. 先篩選出符合條件的所有車輛 (包含國家、年份、價格)
+                    const filteredCars = allDealerCars.filter(c => {
+                        // 防呆：確保欄位存在
+                        const carCountry = (c.countryName || "").toLowerCase();
+                        const filterCountryVal = country.toLowerCase();
+                        
+                        const matchCountry = country === "All" || carCountry === filterCountryVal;
+                        const matchYear = (c.model_year || 0) >= yMin && (c.model_year || 0) <= yMax;
+                        const matchPrice = c.base_price >= pMin && c.base_price <= pMax;
+
+                        if (currentSelectedBrand) {
+                            // 【情境 A】已經點進某品牌內頁
+                            if (c.brand !== currentSelectedBrand) return false;
+                            
+                            const matchKeyword = !keyword || c.model_name.toLowerCase().includes(keyword);
+                            
+                            // ★ 修正 1：這裡原本漏了 matchCountry，現在補上！
+                            return matchKeyword && matchCountry && matchYear && matchPrice;
+                        } else {
+                            // 【情境 B】在外層品牌列表
+                            const matchKeyword = !keyword || 
+                                                 c.model_name.toLowerCase().includes(keyword) || 
+                                                 c.brand.toLowerCase().includes(keyword);
+                            
+                            return matchKeyword && matchCountry && matchYear && matchPrice;
+                        }
+                    });
+
+                    // 2. 渲染車款表格 (內頁用)
+                    renderDealerTable(filteredCars);
+
+                    // 3. 渲染品牌卡片 (外層用)
+                    // ★ 修正 2：外層的品牌卡片，應該只顯示「篩選後還有車」的品牌
+                    if (viewBrandList.style.display !== "none") {
+                        
+                        // 找出所有符合篩選條件的車輛所屬的品牌
+                        const availableBrands = new Set(filteredCars.map(c => c.brand));
+                        
+                        // 只顯示這些品牌
+                        const filteredBrands = allBrandsData.filter(b => availableBrands.has(b.name));
+                        
+                        renderBrandCards(filteredBrands);
+                    }
+
+                } else if (currentMode === "used") {
+                    // 二手車邏輯保持不變 (原本就是好的)
+                    const keyword = usedSearch.value.toLowerCase().trim();
+                    const myId = Number(playerId);
+
+                    let filteredUsed = allUsedCars.filter(c => {
+                        if (Number(c.seller_id) === myId) return false;
+
+                        const matchKeyword = !keyword || c.model_name.toLowerCase().includes(keyword) || c.brand_name.toLowerCase().includes(keyword) || c.seller_name.toLowerCase().includes(keyword);
+                        const carCountry = (c.countryName || "").toLowerCase();
+                        const filterCountryVal = country.toLowerCase();
+                        const matchCountry = country === "All" || carCountry === filterCountryVal;
+                        
+                        const matchYear = (c.model_year || 0) >= yMin && (c.model_year || 0) <= yMax;
+                        const matchPrice = c.sale_price >= pMin && c.sale_price <= pMax;
+                        
+                        return matchKeyword && matchCountry && matchYear && matchPrice;
+                    });
+                    renderUsedTable(filteredUsed);
+                }
+            }
+
+            function initDealerData() {
+                if (isDealerLoaded) {
+                    applyFilters();
+                    return;
+                }
+                apiGetDealerBrands().then(brands => {
+                    allBrandsData = (brands || []).sort((a, b) => a.name.localeCompare(b.name));
+                    renderBrandCards(allBrandsData);
+
+                    const promises = allBrandsData.map(b => apiGetDealerCarsByBrand(b.name));
+                    Promise.all(promises).then(results => {
+                        allDealerCars = results.flat();
+                        allDealerCars.forEach(c => {
+                            if (!c.countryName) c.countryName = "";
+                            if (!c.model_year) c.model_year = 0;
+                        });
+                        isDealerLoaded = true;
+                        applyFilters();
+                    });
+                });
+            }
+
+            function renderBrandCards(brands) {
+                const container = document.getElementById("brand-container");
+                if (!container) return;
+                container.innerHTML = "";
+
+                if (brands.length === 0) {
+                    container.innerHTML = "<p>無符合的品牌</p>";
+                    return;
+                }
+
+                brands.forEach(brandObj => {
+                    const div = document.createElement("div");
+                    div.className = "card brand-card";
+                    const logoSrc = getBrandLogoSrc(brandObj.name, brandObj.imageUrl);
+                    div.innerHTML = `
+                        <div class="brand-card-inner">
+                            <img class="brand-card-logo" src="${logoSrc}" alt="${brandObj.name}">
+                            <h2 class="brand-card-name">${brandObj.name}</h2>
+                        </div>`;
+                    const brandLogo = div.querySelector(".brand-card-logo");
+                    attachImageFallback(brandLogo, buildBrandLogoPlaceholderSrc(brandObj.name));
+                    div.addEventListener("click", () => {
+                        loadDealerCarsByBrand(brandObj);
+                    });
+                    container.appendChild(div);
+                });
+            }
+
+            function loadDealerCarsByBrand(brandObj) {
+                const brandName = brandObj.name;
+                const flagUrl = getFlagImageSrc(brandObj.countryFlagUrl, brandObj.countryName || brandName);
+
+                currentSelectedBrand = brandName;
+                viewBrandList.style.display = "none";
+                viewCarList.style.display = "block";
+
+                const brief = document.getElementById("dealer-brief");
+                // ★ 修改：標題格式 -> 品牌名 [國旗] 車款列表
+                brief.innerHTML = `
+                    <span>${brandName}</span>
+                    <img src="${flagUrl}" class="header-country-flag">
+                `;
+                attachImageFallback(brief.querySelector(".header-country-flag"), buildFlagPlaceholderSrc(brandObj.countryName || brandName));
+
+                if (filterCountryGroup) filterCountryGroup.style.display = "none";
+
+                if (dealerSearch) {
+                    dealerSearch.value = "";
+                    dealerSearch.placeholder = `搜尋 ${brandName} 車款...`;
+                }
+
+                dealerSection.classList.remove("search-active");
+                applyFilters();
+            }
+
+            function renderDealerTable(carsList) {
+                const tbody = document.querySelector("#dealer-table tbody");
+                if (!tbody) return;
+                tbody.innerHTML = "";
+                if (!carsList || carsList.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7">沒有符合的車款</td></tr>`;
+                    return;
+                }
+
+                carsList.forEach(c => {
+                    const tr = document.createElement("tr");
+                    const isSoldOut = c.stock <= 0;
+                    const btnClass = isSoldOut ? "buy-dealer-btn disabled" : "buy-dealer-btn";
+                    const btnText = isSoldOut ? "缺貨" : "購買";
+                    const btnDisabled = isSoldOut ? "disabled" : "";
+                    const carImgSrc = getCarImageSrc(c.car_img, `${c.brand} ${c.model_name}`);
+
+                    tr.innerHTML = `
+                        <td><img src="${carImgSrc}" class="car-thumb"></td>
+                        <td>${c.model_name}</td> 
+                        <td>${c.model_year || '-'}</td>
+                        <td>${c.power ? c.power + ' BHP' : '-'}</td>
+                        <td>${c.top_speed ? c.top_speed + ' KM/H' : '-'}</td>
+                        <td style="font-weight:bold;">$${c.base_price.toLocaleString()}</td>
+                        <td><button class="${btnClass}" data-id="${c.model_id}" ${btnDisabled}>${btnText}</button></td>
+                    `;
+                    const carImg = tr.querySelector(".car-thumb");
+                    attachImageFallback(carImg, buildCarPlaceholderSrc(`${c.brand} ${c.model_name}`));
+                    tbody.appendChild(tr);
+                });
+
+                tbody.querySelectorAll(".buy-dealer-btn").forEach(btn => {
+                    if (!btn.disabled) {
+                        btn.addEventListener("click", () => {
+                            const id = Number(btn.getAttribute("data-id"));
+                            const carData = allDealerCars.find(c => c.model_id === id);
+                            if (carData) openBuyModal(carData);
+                        });
+                    }
+                });
+            }
+
+            function loadUsedCars() {
+                apiGetUsedCars().then(cars => {
+                    allUsedCars = cars;
+                    allUsedCars.forEach(c => {
+                        if (!c.model_year) c.model_year = 0;
+                        if (!c.listing_date) c.listing_date = null;
+                    });
+                    applyFilters();
+                });
+            }
+
+            function renderUsedTable(cars) {
+                const tbody = document.querySelector("#used-table tbody");
+                if (!tbody) return;
+                tbody.innerHTML = "";
+                const myId = Number(playerId);
+
+                if (!cars || cars.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px;">沒有符合的二手車</td></tr>`;
+                    return;
+                }
+
+                cars.forEach(c => {
+                    if (Number(c.seller_id) === myId) return;
+
+                    // ★ 修改：顯示日期+時間
+                    let listedText = "-";
+                    if (c.listing_date) {
+                        const d = new Date(c.listing_date);
+                        if (!isNaN(d.getTime())) listedText = d.toLocaleString("zh-TW");
+                    }
+
+                    const tr = document.createElement("tr");
+                    const carImgSrc = getCarImageSrc(c.car_img, `${c.brand_name} ${c.model_name}`);
+                    const flagImgSrc = getFlagImageSrc(c.country_img, c.countryName || c.brand_name);
+                    tr.innerHTML = `
+                        <td>${c.seller_name}</td>
+                        
+                        <td>
+                          <div class="car-cell">
+                            <img src="${carImgSrc}" class="car-thumb">
+                            <div class="car-name">${c.model_name}</div>
+                          </div>
+                        </td>
+                        
+                        <td>${c.model_year || '-'}</td>
+                        
+                        <td>
+                            <div style="display:inline-flex; align-items:center; gap:8px;">
+                                <img src="${flagImgSrc}" class="flag-icon">
+                                <span>${c.brand_name}</span>
+                            </div>
+                        </td>
+                        <td>${c.mileage != null ? c.mileage + ' KM' : '0 KM'}</td>
+                        <td style="font-weight:bold; color:#d35400;">$${c.sale_price.toLocaleString()}</td>
+                        <td style="font-size:12px; color:#666;">${listedText}</td>
+                        <td><button class="buy-used-btn" data-id="${c.player_car_id}">購買</button></td>
+                    `;
+                    attachImageFallback(tr.querySelector(".car-thumb"), buildCarPlaceholderSrc(`${c.brand_name} ${c.model_name}`));
+                    attachImageFallback(tr.querySelector(".flag-icon"), buildFlagPlaceholderSrc(c.countryName || c.brand_name));
+                    tbody.appendChild(tr);
+                });
+
+                tbody.querySelectorAll(".buy-used-btn").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        const id = btn.getAttribute("data-id");
+                        if (!confirm("確定要購買這輛車嗎？")) return;
+                        apiBuyCar(id).then(res => {
+                            if (res && res.success) {
+                                tradeMsg.innerText = "購買成功！";
+                                updateMoneyDisplay(res.money);
+                                loadUsedCars();
+                            } else {
+                                tradeMsg.innerText = res.message || "購買失敗";
+                            }
+                        });
+                    });
+                });
+            }
+
+            // --- 彈窗邏輯 ---
+            const buyModal = document.getElementById("buy-modal");
+            const buyOverlay = document.getElementById("buy-modal-overlay");
+            const btnConfirm = document.getElementById("btn-confirm-buy");
+            const btnCancel = document.getElementById("btn-cancel-buy");
+            const btnCloseX = document.getElementById("modal-close-x");
+            let targetCarId = null;
+
+            function openBuyModal(c) {
+                targetCarId = c.model_id;
+                const modalCarImg = document.getElementById("modal-car-img");
+                modalCarImg.src = getCarImageSrc(c.car_img, `${c.brand} ${c.model_name}`);
+                attachImageFallback(modalCarImg, buildCarPlaceholderSrc(`${c.brand} ${c.model_name}`));
+                document.getElementById("modal-car-name").innerText = `${c.brand} ${c.model_name}`;
+                document.getElementById("modal-car-year").innerText = c.model_year || '-';
+                document.getElementById("modal-car-power").innerText = c.power ? `${c.power} BHP` : '-';
+                document.getElementById("modal-car-speed").innerText = c.top_speed ? `${c.top_speed} KM/H` : '-';
+                document.getElementById("modal-car-price").innerText = `$${c.base_price.toLocaleString()}`;
+
+                buyModal.classList.add("show");
+                buyOverlay.classList.add("show");
+            }
+
+            function closeBuyModal() {
+                buyModal.classList.remove("show");
+                buyOverlay.classList.remove("show");
+                targetCarId = null;
+            }
+
+            if (btnCancel) btnCancel.addEventListener("click", closeBuyModal);
+            if (btnCloseX) btnCloseX.addEventListener("click", closeBuyModal);
+            if (buyOverlay) buyOverlay.addEventListener("click", closeBuyModal);
+
+            if (btnConfirm) {
+                btnConfirm.addEventListener("click", () => {
+                    if (!targetCarId) return;
+                    apiBuyDealerCar(targetCarId).then(res => {
+                        if (res && res.success) {
+                            tradeMsg.className = "success-msg";
+                            tradeMsg.style.color = "green";
+                            tradeMsg.innerText = "購買成功！";
+                            if (typeof res.money === 'number') updateMoneyDisplay(res.money);
+                            else {
+                                apiGetProfile(playerId).then(u => { if (u) updateMoneyDisplay(u.money); });
+                            }
+                            closeBuyModal();
+                            isDealerLoaded = false; initDealerData();
+                        } else {
+                            alert(res.message || "購買失敗");
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

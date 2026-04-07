@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <title>註冊新帳號</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="api.js"></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <nav class="header-nav">
+                    <a href="home.html" class="nav-link nav-link-active">HOME</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="app login-page">
+        <h2>Create new account</h2>
+
+        <label>
+            <input type="text" id="reg-username" placeholder="Account">
+        </label>
+        
+        <label>
+            <input type="password" id="reg-password" placeholder="Password">
+        </label>
+        
+        <button id="reg-btn">Register</button>
+        <p id="reg-msg"></p>
+
+        <hr>
+
+        <p>
+            已經有帳號了？
+            <button id="back-login">回到登入</button>
+        </p>
+    </div>
+
+    <script>
+        const regBtn = document.getElementById("reg-btn");
+        const backBtn = document.getElementById("back-login");
+
+        regBtn.addEventListener("click", () => {
+            const u = document.getElementById("reg-username").value;
+            const p = document.getElementById("reg-password").value;
+            apiRegister(u, p).then(result => {
+                const msg = document.getElementById("reg-msg");
+                if (result.success) {
+                    msg.innerText = "註冊成功，請回登入畫面登入。";
+                    msg.style.color = "green";
+                } else {
+                    msg.innerText = result.message || "註冊失敗";
+                    msg.style.color = "red";
+                }
+            });
+        });
+
+        backBtn.addEventListener("click", () => {
+            window.location.href = "index.html";
+        });
+    </script>
+</body>
+
+</html>

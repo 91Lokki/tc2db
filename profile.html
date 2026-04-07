@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <title>個人資料</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="api.js"></script>
+    <style>
+        /* 圖片樣式 */
+        .car-thumb-small {
+            width: 60px;
+            height: 36px;
+            object-fit: cover;
+            border-radius: 4px;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        .flag-icon-small {
+            width: 24px; /* 稍微加大一點點 */
+            height: auto;
+            border-radius: 2px;
+            vertical-align: middle;
+            margin-right: 8px; /* 與文字拉開距離 */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        /* 讓品牌欄位內容水平排列 */
+        .brand-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center; /* 如果想要置中 */
+        }
+        .car-name-cell {
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <nav class="header-nav">
+                    <a href="home.html" class="nav-link">HOME</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div class="profile-icon" id="nav-profile-icon"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="app">
+        <h1 id="page-title">玩家個人資料</h1>
+
+        <div id="profile-basic" style="margin-top:10px;"></div>
+
+        <div id="edit-section" style="display:none; margin-top:15px; background:#fff; padding:20px; border-radius:16px;">
+            <h2 style="margin-top:0;">修改密碼</h2>
+            
+            <div style="margin-bottom:10px;">
+                <label style="font-weight:bold; font-size:13px;">舊密碼 (必填)：</label><br>
+                <input type="password" id="old-password" class="filter-input" style="width:100%; max-width:300px;">
+            </div>
+            
+            <div style="margin-bottom:15px;">
+                <label style="font-weight:bold; font-size:13px;">新密碼：</label><br>
+                <input type="password" id="new-password" class="filter-input" style="width:100%; max-width:300px;">
+            </div>
+
+            <button id="save-profile">儲存變更</button>
+            <button id="cancel-edit">取消</button>
+            
+            <hr style="margin: 20px 0; border:0; border-top:1px solid #eee;">
+            
+            <button id="delete-account" style="background:#ff3b30; color:#fff; border-color:#ff3b30;">刪除帳號 (危險)</button>
+            <p id="edit-msg" style="margin-top:10px; font-weight:bold;"></p>
+        </div>
+
+        <h2 style="margin-top:25px;">Garage</h2>
+        <table id="car-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">車款</th>
+                    <th style="width: 10%;">年份</th>
+                    <th style="width: 15%;">品牌</th>
+                    <th style="width: 10%;">里程數</th>
+                    <th style="width: 15%;">價格</th>
+                    <th style="width: 15%;">上架時間</th>
+                    <th style="width: 10%;">管理</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h2 style="margin-top:25px;">Transcation History</h2>
+        <table id="tx-table">
+            <thead>
+                <tr>
+                    <th>時間</th>
+                    <th>類型</th>
+                    <th>說明</th>
+                    <th>金額</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const playerId = localStorage.getItem("playerId");
+        // 允許不登入瀏覽，但如果要看自己資料須登入
+        if (!playerId) { window.location.href = "login.html"; }
+
+        let currentUser = null;
+        
+        const navIcon = document.getElementById("nav-profile-icon");
+        if (navIcon) {
+            const username = localStorage.getItem("username") || "你";
+            navIcon.textContent = username.charAt(0).toUpperCase();
+            navIcon.addEventListener("click", () => { window.location.href = "profile.html"; });
+        }
+
+        const profileBasic = document.getElementById("profile-basic");
+        const editSection = document.getElementById("edit-section");
+        const oldPassInput = document.getElementById("old-password");
+        const newPassInput = document.getElementById("new-password");
+        const editMsg = document.getElementById("edit-msg");
+        const txBody = document.querySelector("#tx-table tbody");
+        const carBody = document.querySelector("#car-table tbody");
+
+        function loadProfile() {
+            apiGetProfile(playerId).then(user => {
+                if(user) renderProfile(user);
+            });
+        }
+
+       function renderProfile(user) {
+            currentUser = user;
+            document.getElementById("page-title").innerText = user.username;
+
+            let careerScore = user.totalScore || 0;
+            const totalRaces = user.raceCount || 0;
+            
+            const raceWins = user.raceWins || 0;
+            
+            // ★ 新增：讀取變數
+            const podiums = user.podiums || 0;
+
+            const goldCups = user.seasonGold || 0;
+            const silverCups = user.seasonSilver || 0;
+            const bronzeCups = user.seasonBronze || 0;
+            
+            let regDateText = user.reg_date ? new Date(user.reg_date).toLocaleDateString("zh-TW") : "-";
+
+            profileBasic.innerHTML = `
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;">
+                <div>
+                  <p class="money-display">💰${user.money != null ? user.money.toLocaleString() : 0}</p>
+                </div>
+                <div style="text-align:right;">
+                  <button id="edit-btn">設定 / 修改密碼</button>
+                  <button id="logout-btn" style="margin-left:8px;">登出</button>
+                </div>
+              </div>
+
+              <div style="margin-top:20px;padding:24px;border-radius:18px;background:#ffffff;box-shadow:0 10px 24px rgba(0,0,0,0.06);">
+                <div style="display:flex; flex-wrap:wrap; gap:40px; align-items:flex-start;">
+                  <div>
+                    <div style="font-size:13px;color:#6e6e73; margin-bottom:4px;">賽季排名</div>
+                    <div>
+                        <div id="stat-rank" style="font-size:32px;font-weight:700; line-height:1.2; color:#1d1d1f;">--</div>
+                        <div id="stat-rank-year" style="font-size:13px;color:#8e8e93; margin-top:2px;"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="font-size:13px; margin-bottom:4px; color:#6e6e73;">生涯獎盃</div>
+                    <div style="font-size:32px; font-weight:700; line-height:1.2;">
+                        🥇${goldCups} 🥈${silverCups} 🥉${bronzeCups}
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="display:flex;flex-wrap:wrap;gap:30px;margin-top:24px;padding-top:20px;border-top:1px solid #f5f5f7;">
+                  <div><div style="font-size:12px;color:#6e6e73;">生涯總積分</div><div style="font-size:18px;font-weight:600;">${careerScore}</div></div>
+                  <div><div style="font-size:12px;color:#6e6e73;">完賽次數</div><div style="font-size:18px;font-weight:600;">${totalRaces}</div></div>
+                  
+                  <div><div style="font-size:12px;color:#6e6e73;">分站冠軍</div><div style="font-size:18px;font-weight:600;">${raceWins}</div></div>
+                  
+                  <div><div style="font-size:12px;color:#6e6e73;">頒獎台</div><div style="font-size:18px;font-weight:600;">${podiums}</div></div>
+
+                  <div><div style="font-size:12px;color:#6e6e73;">註冊日期</div><div style="font-size:16px;font-weight:500;">${regDateText}</div></div>
+                </div>
+              </div>
+            `;
+            
+            // ... (後面的代碼保持不變) ...
+
+            document.getElementById("edit-btn").addEventListener("click", () => editSection.style.display = "block");
+            document.getElementById("logout-btn").addEventListener("click", () => {
+                localStorage.removeItem("authToken"); 
+                localStorage.removeItem("playerId");
+                localStorage.removeItem("username");
+                localStorage.removeItem("isAdmin");
+                window.location.href = "index.html";
+            });
+
+            // 取得目前排名
+            apiGetYears().then(years => {
+                if (!years || years.length === 0) return;
+                const validYears = years.filter(y => y !== 'all');
+                const targetYear = validYears[validYears.length - 1] || 2024;
+                
+                const yearLabel = document.getElementById("stat-rank-year");
+                if (yearLabel) yearLabel.textContent = `${targetYear} 年度`;
+                
+                apiGetPlayerRankByYear(targetYear, user.username).then(info => {
+                    const rankEl = document.getElementById("stat-rank");
+                    if (rankEl) rankEl.textContent = (info && info.rank > 0) ? `第 ${info.rank} 名` : "-";
+                });
+            });
+
+            // 2. 渲染車庫
+            renderGarage(user.cars);
+
+            // 3. 渲染交易紀錄
+            renderTransactions(user.transactions);
+        }
+
+        function renderGarage(cars) {
+            carBody.innerHTML = "";
+            const list = cars || [];
+            
+            const selling = list.filter(c => c.on_sale);
+            const idle = list.filter(c => !c.on_sale);
+
+            if (list.length === 0) {
+                carBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">車庫空空如也</td></tr>`;
+                return;
+            }
+
+            const addRow = (c, bgColor) => {
+                let listingText = "-";
+                if(c.on_sale && c.listing_date) {
+                    const d = new Date(c.listing_date);
+                    if(!isNaN(d.getTime())) listingText = d.toLocaleString("zh-TW");
+                }
+
+                const priceText = c.on_sale ? `$${c.sale_price.toLocaleString()}` : "-";
+                const btnColor = c.on_sale ? "#ff3b30" : "#0071e3";
+                const btnText = c.on_sale ? "下架" : "上架";
+                
+                const carImgSrc = getCarImageSrc(c.car_img, `${c.brand_name} ${c.model_name}`);
+                const flagImgSrc = getFlagImageSrc(c.country_img, c.country_name || c.brand_name);
+
+                carBody.innerHTML += `
+                    <tr style="background-color: ${bgColor};">
+                        <td>
+                            <div class="car-name-cell">
+                                <img src="${carImgSrc}" class="car-thumb-small" data-fallback-car="${c.brand_name} ${c.model_name}">
+                                <span>${c.model_name}</span>
+                            </div>
+                        </td>
+                        <td>${c.model_year || "-"}</td>
+                        <td>
+                            <div class="brand-cell">
+                                <img src="${flagImgSrc}" class="flag-icon-small" data-fallback-flag="${c.country_name || c.brand_name}">
+                                <span>${c.brand_name}</span>
+                            </div>
+                        </td>
+                        <td>${c.mileage.toLocaleString()} km</td>
+                        <td style="font-weight:bold;">${priceText}</td>
+                        <td style="font-size:12px; color:#666;">${listingText}</td>
+                        <td>
+                            <button class="action-btn" 
+                                data-id="${c.car_id}" 
+                                data-sale="${c.on_sale}"
+                                style="background:${btnColor}; color:white; border:none; padding:6px 12px; border-radius:12px;">
+                                ${btnText}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            };
+
+            if(selling.length > 0) {
+                carBody.innerHTML += `<tr style="background:#fff8e1; color:#d35400; font-weight:bold;"><td colspan="7">🔥 販售中</td></tr>`;
+                selling.forEach(c => addRow(c, "#fffdf5"));
+            }
+            if(idle.length > 0) {
+                carBody.innerHTML += `<tr style="background:#f2f2f7; color:#666; font-weight:bold;"><td colspan="7">🚗 收藏</td></tr>`;
+                idle.forEach(c => addRow(c, "#fff"));
+            }
+
+            carBody.querySelectorAll(".car-thumb-small").forEach((img) => {
+                attachImageFallback(img, buildCarPlaceholderSrc(img.dataset.fallbackCar || "Car"));
+            });
+
+            carBody.querySelectorAll(".flag-icon-small").forEach((img) => {
+                attachImageFallback(img, buildFlagPlaceholderSrc(img.dataset.fallbackFlag || "Flag"));
+            });
+
+            // 綁定按鈕
+            carBody.querySelectorAll(".action-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const carId = btn.getAttribute("data-id");
+                    const isSale = btn.getAttribute("data-sale") === "true";
+                    
+                    if (isSale) {
+                        if(!confirm("確定要下架這台車嗎？")) return;
+                        apiSetCarOnSale(playerId, carId, false, 0).then(res => {
+                            if(res.success) { alert("已下架"); loadProfile(); }
+                            else alert(res.message || "操作失敗");
+                        });
+                    } else {
+                        const price = prompt("請輸入售價：", "100000");
+                        if(!price) return;
+                        apiSetCarOnSale(playerId, carId, true, price).then(res => {
+                            if(res.success) { alert("上架成功"); loadProfile(); }
+                            else alert(res.message || "操作失敗");
+                        });
+                    }
+                });
+            });
+        }
+
+        function renderTransactions(txs) {
+            txBody.innerHTML = "";
+            const list = txs || [];
+            if (list.length === 0) {
+                txBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">無交易紀錄</td></tr>`;
+                return;
+            }
+            list.forEach(t => {
+                const dateStr = t.time ? new Date(t.time).toLocaleString() : "-";
+                const color = t.amount < 0 ? "#ff3b30" : "#34c759";
+                const amountStr = t.amount != null ? t.amount.toLocaleString() : "-";
+                
+                txBody.innerHTML += `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td>${t.type}</td>
+                        <td>${t.desc || "-"}</td>
+                        <td style="color:${color}; font-weight:bold;">${amountStr}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        document.getElementById("save-profile").addEventListener("click", () => {
+            const oldP = oldPassInput.value;
+            const newP = newPassInput.value;
+            
+            if(!oldP) {
+                editMsg.innerText = "請輸入舊密碼以驗證身分";
+                editMsg.style.color = "red";
+                return;
+            }
+            if(!newP) {
+                editMsg.innerText = "新密碼不能為空";
+                return;
+            }
+
+            apiUpdateProfile(playerId, { oldPassword: oldP, newPassword: newP }).then(res => {
+                if(res.success) {
+                    editMsg.innerText = "密碼修改成功！";
+                    editMsg.style.color = "green";
+                    oldPassInput.value = "";
+                    newPassInput.value = "";
+                } else {
+                    editMsg.innerText = res.message || "修改失敗，舊密碼可能錯誤";
+                    editMsg.style.color = "red";
+                }
+            });
+        });
+
+        document.getElementById("cancel-edit").addEventListener("click", () => {
+            editSection.style.display = "none";
+            editMsg.innerText = "";
+        });
+
+        document.getElementById("delete-account").addEventListener("click", () => {
+            if(!confirm("警告：確定要永久刪除帳號嗎？資料將無法復原！")) return;
+            
+            apiDeleteAccount(playerId).then(res => {
+                if(res.success) {
+                    alert("帳號已刪除");
+                    localStorage.clear();
+                    window.location.href = "index.html";
+                } else {
+                    alert(res.message || "刪除失敗");
+                }
+            });
+        });
+
+        loadProfile();
+    </script>
+</body>
+</html>
