@@ -64,7 +64,7 @@ tc2db-main/
 
 ### Schedule Lookup
 
-![Schedule Lookup](images/schedule.png)
+![Schedule Lookup](images/schedule_demo.png)
 
 ### Used Car Market
 
