@@ -293,28 +293,6 @@ Key models in [`backend/prisma/schema.prisma`](/Users/mike/Desktop/tc2db-main/ba
 - The mock ecosystem seed intentionally leaves pending races so the admin can continue simulating the active season
 - If auth behavior changes, log out and log back in to refresh the JWT payload
 
-## Troubleshooting
-
-### `simulate` or `new season` is disabled
-
-Make sure you are logged in as:
-
-- username: `admin`
-- password: `password123`
-
-If you previously logged in before the `isAdmin` field existed, log out and log in again.
-
-### GitHub push does not work
-
-This repository can be committed locally without being pushed. If `git push` fails, make sure GitHub authentication is configured on your machine.
-
-### Seed fails because CSV files are missing
-
-Either:
-
-- place the CSV files in `/Users/mike/Documents/tc2_crawler`
-- or override the CSV paths with environment variables
-
 ## License
 
 This project currently has no explicit license file in the repository.
