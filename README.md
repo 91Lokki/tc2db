@@ -60,6 +60,28 @@ tc2db-main/
   - season standings
   - race history
 
+## Demo Screenshots
+
+### Schedule Lookup
+
+![Schedule Lookup](images/schedule.png)
+
+### Used Car Market
+
+![Used Car Market](images/used.png)
+
+### Leaderboard And Race Dashboard
+
+![Leaderboard And Race Dashboard](images/simulate.png)
+
+### Dealership Purchase Modal
+
+![Dealership Purchase Modal](images/dealership.png)
+
+### Player Profile And Garage
+
+![Player Profile And Garage](images/profile.png)
+
 ## Quick Start
 
 ### 1. Install backend dependencies
